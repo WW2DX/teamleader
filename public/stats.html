@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Leader — Statistics</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:#111827;min-height:100vh;padding:14px}
+h1{font-size:12px;font-weight:700;letter-spacing:3px;color:#1e3a5f;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#1e3a5f;color:#fff;padding:10px 14px;border-radius:6px;margin-bottom:12px}
+h1 .callsign{font-size:14px;color:#fbbf24;font-weight:700;letter-spacing:2px}
+h1 .upd{font-size:10px;color:#93b4d4;font-weight:400;letter-spacing:0}
+.rbtn{background:#2d5a8e;border:1px solid #1e3a5f;border-radius:4px;color:#fff;font-size:10px;padding:3px 10px;cursor:pointer;font-family:inherit;letter-spacing:1px;text-transform:uppercase;margin-left:auto}
+.rbtn:hover{background:#1e3a5f;color:#fbbf24}
+.stat-row{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:10px}
+.sc{background:#ffffff;border:1px solid #d1d5db;border-radius:6px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sv{font-size:24px;font-weight:800;color:#1e3a5f;font-family:'Courier New',monospace;line-height:1}
+.sv.g{color:#15803d}.sv.a{color:#b45309}.sv.r{color:#dc2626}.sv.p{color:#7c3aed}
+.sl{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin-top:3px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.card{background:#ffffff;border:1px solid #d1d5db;border-radius:6px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ct{font-size:8px;text-transform:uppercase;letter-spacing:2px;color:#6b7280;margin-bottom:8px;font-weight:600;border-bottom:1px solid #f3f4f6;padding-bottom:5px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#6b7280;padding:3px 6px;text-align:right;border-bottom:1px solid #e5e7eb;font-weight:600;white-space:nowrap}
+th:first-child{text-align:left}
+td{padding:4px 6px;text-align:right;border-bottom:1px solid #f3f4f6;font-family:'Courier New',monospace;color:#374151}
+td:first-child{text-align:left;font-family:inherit;color:#111827;font-weight:600}
+td.s{color:#2563eb}td.cw{color:#b45309}td.f{color:#15803d}
+td.tot{color:#111827;font-weight:700}td.pct{color:#9ca3af}
+tr.sub td{border-top:2px solid #e5e7eb;color:#111827;font-weight:700;background:#f9fafb}
+.rrow{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.rl{font-size:10px;color:#6b7280;width:56px;text-align:right;font-family:'Courier New',monospace;flex-shrink:0}
+.rb{flex:1;height:10px;background:#e5e7eb;border-radius:2px;overflow:hidden}
+.rbi{height:100%;border-radius:2px}
+.rv{font-size:10px;color:#374151;width:30px;text-align:right;font-family:'Courier New',monospace;font-weight:700;flex-shrink:0}
+.hw{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
+.hc{text-align:center}
+.hbg{height:36px;display:flex;align-items:flex-end}
+.hb{width:100%;border-radius:1px 1px 0 0;min-height:1px}
+.hl{font-size:7px;color:#9ca3af;margin-top:1px}
+.hv{font-size:8px;color:#6b7280;font-family:'Courier New',monospace}
+.crow{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.cl{font-size:10px;color:#111827;width:30px;font-weight:600}
+.cbg{flex:1;height:10px;background:#e5e7eb;border-radius:2px;overflow:hidden}
+.cbi{height:100%;border-radius:2px;background:#2563eb}
+.cn{font-size:10px;color:#374151;font-family:'Courier New',monospace;width:44px;text-align:right}
+footer{text-align:center;font-size:9px;color:#9ca3af;margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb}
+</style>
+</head>
+<body>
+<h1>
+  TEAM LEADER &mdash; STATISTICS
+  <span class="callsign" id="s-cs">—</span>
+  <span class="upd" id="s-upd">Loading...</span>
+  <button class="rbtn" onclick="load()">&#8635; Refresh</button>
+</h1>
+
+<div class="stat-row">
+  <div class="sc"><div class="sv g" id="s-t">—</div><div class="sl">Total QSOs</div></div>
+  <div class="sc"><div class="sv a" id="s-r">—</div><div class="sl">Rate /hr</div></div>
+  <div class="sc"><div class="sv" id="s-bh">—</div><div class="sl">Best Hour</div></div>
+  <div class="sc"><div class="sv" id="s-ssb">—</div><div class="sl">SSB</div></div>
+  <div class="sc"><div class="sv a" id="s-cw">—</div><div class="sl">CW</div></div>
+  <div class="sc"><div class="sv g" id="s-ft8">—</div><div class="sl">FT8</div></div>
+  <div class="sc"><div class="sv p" id="s-bn">—</div><div class="sl">Bands</div></div>
+  <div class="sc"><div class="sv r" id="s-d">—</div><div class="sl">Dupes</div></div>
+</div>
+
+<div class="g3">
+  <div class="card" style="grid-column:span 2">
+    <div class="ct">QSOs by Band &amp; Mode</div>
+    <table>
+      <thead><tr><th>Band</th><th style="color:#60a5fa">SSB</th><th style="color:#fbbf24">CW</th><th style="color:#15803d">FT8</th><th>Total</th><th>%</th><th style="color:#7c3aed">DXCC</th><th>Bar</th></tr></thead>
+      <tbody id="btb"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="ct">Rate Statistics</div>
+    <div id="rs"></div>
+    <div class="ct" style="margin-top:14px">Session Info</div>
+    <div id="si"></div>
+  </div>
+</div>
+
+<div class="g4">
+  <div class="card" style="grid-column:span 2">
+    <div class="ct">QSOs by Operator</div>
+    <table>
+      <thead><tr><th>Operator</th><th>QSOs</th><th style="color:#60a5fa">SSB</th><th style="color:#fbbf24">CW</th><th style="color:#15803d">FT8</th><th>%</th><th>Rate/hr</th></tr></thead>
+      <tbody id="otb"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="ct">QSOs by Continent</div>
+    <div id="cc"></div>
+  </div>
+  <div class="card">
+    <div class="ct">Top DXCC Prefixes (top 20)</div>
+    <table>
+      <thead><tr><th>Prefix</th><th>QSOs</th><th>%</th></tr></thead>
+      <tbody id="ptb"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:10px">
+  <div class="ct">Hourly Rate — Last 24 Hours (UTC)</div>
+  <div class="hw" id="hc"></div>
+</div>
+
+<div class="g2">
+  <div class="card">
+    <div class="ct">Most Active Callers (top 25)</div>
+    <table>
+      <thead><tr><th>Callsign</th><th>QSOs</th><th>Bands</th><th>Modes</th></tr></thead>
+      <tbody id="ctb"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="ct">QSOs by UTC Hour (all time)</div>
+    <div id="tod"></div>
+  </div>
+</div>
+
+<footer>Team Leader v<span id="fv">—</span> &nbsp;|&nbsp; Live data from local SQLite &nbsp;|&nbsp; Auto-refresh every 30s</footer>
+
+<!-- ── GOAL TRACKER ──────────────────────────────────────────────────────── -->
+<div style="margin-top:14px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+    <div style="font-size:12px;font-weight:700;letter-spacing:3px;color:#1e3a5f;text-transform:uppercase;background:#1e3a5f;color:#fff;padding:10px 14px;border-radius:6px">DXpedition Goal Tracker</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Duration (days)</label>
+      <input type="number" id="goal-days" min="1" max="90" value="10"
+        style="width:60px;padding:4px 8px;background:#f9fafb;border:1px solid #d1d5db;border-radius:4px;color:#111827;font-size:13px;font-family:'Courier New',monospace;text-align:center"
+        oninput="saveGoals();buildGoalChart()">
+      <label style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-left:8px">Target QSOs</label>
+      <input type="number" id="goal-qsos" min="100" max="500000" step="1000" value="50000"
+        style="width:90px;padding:4px 8px;background:#f9fafb;border:1px solid #d1d5db;border-radius:4px;color:#111827;font-size:13px;font-family:'Courier New',monospace;text-align:center"
+        oninput="saveGoals();buildGoalChart()">
+      <label style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-left:8px">Start Date/Time (UTC)</label>
+      <input type="datetime-local" id="goal-start"
+        style="padding:4px 8px;background:#f9fafb;border:1px solid #d1d5db;border-radius:4px;color:#111827;font-size:12px"
+        oninput="saveGoals();buildGoalChart()">
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px" id="goal-cards"></div>
+
+  <!-- Chart canvas -->
+  <div class="card" style="padding:16px">
+    <div class="ct">Progress vs Target</div>
+    <canvas id="goal-canvas" height="220" style="width:100%;display:block"></canvas>
+  </div>
+
+  <!-- Pace table -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+    <div class="card">
+      <div class="ct">Pace Analysis</div>
+      <div id="goal-pace"></div>
+    </div>
+    <div class="card">
+      <div class="ct">Daily Breakdown</div>
+      <div style="max-height:200px;overflow-y:auto">
+        <table><thead><tr><th>Day</th><th>QSOs</th><th>Cumul.</th><th>Target</th><th>Delta</th></tr></thead>
+        <tbody id="goal-daily"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const BANDS=['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M','6M'];
+const CMAP={W:'NA',K:'NA',N:'NA',VE:'NA',VA:'NA',VB:'NA',VC:'NA',VG:'NA',XE:'NA',KH:'NA',KL:'NA',KP:'NA',
+  PY:'SA',PP:'SA',PR:'SA',LU:'SA',CE:'SA',YV:'SA',HC:'SA',HI:'SA',HK:'SA',OA:'SA',ZP:'SA',CX:'SA',
+  G:'EU',M:'EU',DL:'EU',DJ:'EU',DK:'EU',DF:'EU',F:'EU',ON:'EU',PA:'EU',SM:'EU',SA:'EU',LA:'EU',OH:'EU',
+  SP:'EU',UA:'EU',RA:'EU',HA:'EU',OK:'EU',OM:'EU',I:'EU',IK:'EU',IZ:'EU',EA:'EU',CT:'EU',YO:'EU',LZ:'EU',OZ:'EU',TF:'EU',EI:'EU',
+  HB:'EU',S5:'EU',JY:'AS',
+  JA:'AS',HL:'AS',DS:'AS',BY:'AS',BG:'AS',VU:'AS',HS:'AS',XV:'AS',UA9:'AS',UA0:'AS',RA9:'AS',
+  '9N':'AS','4S':'AS','4X':'AS','A4':'AS','A6':'AS','A7':'AS','A9':'AS',E2:'AS','3W':'AS',
+  ZS:'AF',TJ:'AF',TL:'AF',TN:'AF',TR:'AF',TT:'AF',TU:'AF',
+  '5H':'AF','5U':'AF','5X':'AF','5Z':'AF','6W':'AF','7P':'AF','7Q':'AF','7X':'AF','9G':'AF','9J':'AF','9L':'AF','9Q':'AF','9U':'AF','9X':'AF',
+  VK:'OC','3D2':'OC','A3':'OC','DU':'OC','T8':'OC','V7':'OC','YB':'OC','ZK':'OC',KH6:'OC',
+  VK0:'AN',CE9:'AN',DP0:'AN',VP8:'AN'};
+
+function cont(call) {
+  const c=call.split('/')[0];
+  for(let n=4;n>=1;n--){const p=c.slice(0,n);if(CMAP[p])return CMAP[p];}
+  const m=c.match(/^(\d[A-Z]+)/);if(m&&CMAP[m[1]])return CMAP[m[1]];
+  return 'OT';
+}
+function pfx(call) {
+  if(!call)return'?';
+  const c=call.replace(/\/(P|M|MM|AM)$/i,'').split('/');
+  if(c.length>1&&c[1].length<=4){const m=c[1].match(/^([A-Z]+\d?)/);if(m)return m[1];}
+  const m=c[0].match(/^(\d[A-Z]+\d*|[A-Z]+\d+)/);return m?m[1]:c[0].slice(0,3);
+}
+
+async function load() {
+  try {
+    const [qr,cr]=await Promise.all([fetch('/api/qsos'),fetch('/api/config')]);
+    const all=await qr.json(), cfg=await cr.json();
+
+    // Version-change detection: wipe stale goal settings from a previous expedition
+    if (cfg.version) {
+      const lastVer = localStorage.getItem('tl_stats_version');
+      if (lastVer && lastVer !== cfg.version) {
+        localStorage.removeItem(GOAL_KEY);
+        localStorage.removeItem('tl_achievements_v2');
+        console.log('Stats: new version ' + cfg.version + ', cleared goal/achievement state');
+      }
+      localStorage.setItem('tl_stats_version', cfg.version);
+    }
+    goalQsos=all; // keep reference for goal tracker
+    const qsos=all.filter(q=>!q.deleted&&!q.dupe_flag), dupes=all.filter(q=>q.dupe_flag).length;
+    document.getElementById('s-cs').textContent=cfg.callsign||'';
+    document.getElementById('fv').textContent=cfg.version||'—';
+    document.getElementById('s-upd').textContent='Updated '+new Date().toISOString().slice(11,19)+' UTC';
+    sum(qsos,dupes); bands(qsos); ops(qsos); continents(qsos); prefixes(qsos);
+    hourly(qsos); rates(qsos); session(qsos); callers(qsos); tod(qsos);
+    buildGoalChart();
+  } catch(e){document.getElementById('s-upd').textContent='Error: '+e.message;}
+}
+
+function bestHour(qsos) {
+  let b=0;
+  qsos.forEach(q=>{
+    const t=new Date(q.logged_at).getTime();
+    const n=qsos.filter(x=>{const xt=new Date(x.logged_at).getTime();return xt>=t&&xt<t+3600000;}).length;
+    if(n>b)b=n;
+  });
+  return b;
+}
+
+function sum(qsos,dupes) {
+  const now=Date.now(), rate=qsos.filter(q=>now-new Date(q.logged_at)<3600000).length;
+  document.getElementById('s-t').textContent=qsos.length;
+  document.getElementById('s-r').textContent=rate;
+  document.getElementById('s-bh').textContent=bestHour(qsos);
+  document.getElementById('s-ssb').textContent=qsos.filter(q=>q.mode==='SSB').length;
+  document.getElementById('s-cw').textContent=qsos.filter(q=>q.mode==='CW').length;
+  document.getElementById('s-ft8').textContent=qsos.filter(q=>q.mode==='FT8').length;
+  document.getElementById('s-bn').textContent=new Set(qsos.map(q=>q.band)).size;
+  document.getElementById('s-d').textContent=dupes;
+}
+
+function bands(qsos) {
+  const rows=BANDS.map(b=>{
+    const bq=qsos.filter(q=>q.band===b),t=bq.length;if(!t)return null;
+    const dxcc=new Set(bq.map(q=>pfx(q.callsign))).size;
+    return{b,t,ssb:bq.filter(q=>q.mode==='SSB').length,cw:bq.filter(q=>q.mode==='CW').length,ft8:bq.filter(q=>q.mode==='FT8').length,dxcc};
+  }).filter(Boolean).sort((a,b)=>b.t-a.t);
+  const max=Math.max(...rows.map(r=>r.t),1),T=qsos.length||1;
+  const tSSB=qsos.filter(q=>q.mode==='SSB').length,tCW=qsos.filter(q=>q.mode==='CW').length,tFT8=qsos.filter(q=>q.mode==='FT8').length;
+  const tDXCC=new Set(qsos.map(q=>pfx(q.callsign))).size;
+  document.getElementById('btb').innerHTML=rows.map(r=>{
+    const w=Math.round(r.t/max*100);
+    const dxccCol=r.dxcc>=100?`<span style="color:#fbbf24;font-weight:800">${r.dxcc}</span>`:r.dxcc;
+    return`<tr><td>${r.b}</td><td class="s">${r.ssb||''}</td><td class="cw">${r.cw||''}</td><td class="f">${r.ft8||''}</td><td class="tot">${r.t}</td><td class="pct">${Math.round(r.t/T*100)}%</td><td style="color:#7c3aed;text-align:right">${dxccCol}</td><td><div style="height:6px;background:#e5e7eb;border-radius:2px;width:80px"><div style="height:6px;background:#2563eb;border-radius:2px;width:${w}%"></div></div></td></tr>`;
+  }).join('')+`<tr class="sub"><td>TOTAL</td><td class="s">${tSSB}</td><td class="cw">${tCW}</td><td class="f">${tFT8}</td><td class="tot">${qsos.length}</td><td class="pct">100%</td><td style="color:#7c3aed;text-align:right">${tDXCC}</td><td></td></tr>`;
+}
+
+function ops(qsos) {
+  const byOp={};
+  qsos.forEach(q=>{
+    const op=q.operator||'?';
+    if(!byOp[op])byOp[op]={t:0,ssb:0,cw:0,ft8:0,ts:[]};
+    byOp[op].t++;if(q.mode==='SSB')byOp[op].ssb++;if(q.mode==='CW')byOp[op].cw++;if(q.mode==='FT8')byOp[op].ft8++;
+    byOp[op].ts.push(new Date(q.logged_at).getTime());
+  });
+  const now=Date.now(),T=qsos.length||1;
+  document.getElementById('otb').innerHTML=Object.entries(byOp).sort((a,b)=>b[1].t-a[1].t).map(([op,d])=>`
+    <tr><td>${op}</td><td class="tot">${d.t}</td><td class="s">${d.ssb||''}</td><td class="cw">${d.cw||''}</td><td class="f">${d.ft8||''}</td><td class="pct">${Math.round(d.t/T*100)}%</td><td style="color:#15803d">${d.ts.filter(t=>now-t<3600000).length}</td></tr>`
+  ).join('');
+}
+
+function continents(qsos) {
+  const cnt={};
+  qsos.forEach(q=>{const c=cont(q.callsign);cnt[c]=(cnt[c]||0)+1;});
+  const T=qsos.length||1,sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]),max=sorted[0]?.[1]||1;
+  document.getElementById('cc').innerHTML=sorted.map(([c,n])=>`
+    <div class="crow"><div class="cl">${c}</div><div class="cbg"><div class="cbi" style="width:${Math.round(n/max*100)}%"></div></div><div class="cn">${n} <span style="color:#6b7280;font-size:9px">${Math.round(n/T*100)}%</span></div></div>`
+  ).join('');
+}
+
+function prefixes(qsos) {
+  const cnt={};
+  qsos.forEach(q=>{const p=pfx(q.callsign);cnt[p]=(cnt[p]||0)+1;});
+  const T=qsos.length||1,top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  document.getElementById('ptb').innerHTML=top.map(([p,n])=>`<tr><td>${p}</td><td class="tot">${n}</td><td class="pct">${Math.round(n/T*100)}%</td></tr>`).join('');
+}
+
+function hourly(qsos) {
+  const now=new Date();
+  const hs=Array.from({length:24},(_,i)=>{
+    const h=new Date(now.getTime()-(23-i)*3600000);
+    return{l:String(h.getUTCHours()).padStart(2,'0'),c:0};
+  });
+  qsos.forEach(q=>{const a=Math.floor((Date.now()-new Date(q.logged_at))/3600000);if(a<24)hs[23-a].c++;});
+  const max=Math.max(...hs.map(h=>h.c),1);
+  document.getElementById('hc').innerHTML=hs.map(h=>{
+    const p=Math.round(h.c/max*100),col=h.c>0?(p>60?'#b45309':'#2563eb'):'#1a3050';
+    return`<div class="hc"><div class="hbg"><div class="hb" style="height:${p}%;background:${col}"></div></div><div class="hv">${h.c||''}</div><div class="hl">${h.l}</div></div>`;
+  }).join('');
+}
+
+function rates(qsos) {
+  const now=Date.now();
+  const r10=qsos.filter(q=>now-new Date(q.logged_at)<600000).length*6;
+  const r30=qsos.filter(q=>now-new Date(q.logged_at)<1800000).length*2;
+  const r60=qsos.filter(q=>now-new Date(q.logged_at)<3600000).length;
+  const r120=Math.round(qsos.filter(q=>now-new Date(q.logged_at)<7200000).length/2);
+  const bh=bestHour(qsos);
+  const max=Math.max(r10,r30,r60,r120,bh,1);
+  document.getElementById('rs').innerHTML=[['Last 10m',r10,'#2563eb'],['Last 30m',r30,'#2563eb'],['Last 60m',r60,'#15803d'],['Last 2hr',r120,'#6b7280'],['Best hr',bh,'#b45309']].map(([l,v,c])=>`
+    <div class="rrow"><div class="rl">${l}</div><div class="rb"><div class="rbi" style="width:${Math.round(v/max*100)}%;background:${c}"></div></div><div class="rv">${v}</div></div>`
+  ).join('');
+}
+
+function session(qsos) {
+  if(!qsos.length){document.getElementById('si').innerHTML='<div style="font-size:11px;color:#6b7280">No QSOs yet</div>';return;}
+  const s=[...qsos].sort((a,b)=>new Date(a.logged_at)-new Date(b.logged_at));
+  const f=s[0],l=s[s.length-1],dur=new Date(l.logged_at)-new Date(f.logged_at);
+  const avg=dur>0?Math.round(qsos.length/(dur/3600000)):qsos.length;
+  [['First',new Date(f.logged_at).toISOString().slice(11,16)+'Z'],['Last',new Date(l.logged_at).toISOString().slice(11,16)+'Z'],
+   ['Duration',Math.floor(dur/3600000)+'h '+Math.floor((dur%3600000)/60000)+'m'],['Avg rate',avg+'/hr'],
+   ['Unique calls',new Set(qsos.map(q=>q.callsign)).size],['Prefixes',new Set(qsos.map(q=>pfx(q.callsign))).size]
+  ].forEach(([k,v])=>{
+    document.getElementById('si').innerHTML+=`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0d1820;font-size:11px"><span style="color:#6b7280">${k}</span><span style="color:#111827;font-family:'Courier New',monospace">${v}</span></div>`;
+  });
+}
+
+function callers(qsos) {
+  const seen={};
+  qsos.forEach(q=>{const c=q.callsign;if(!seen[c])seen[c]={t:0,bands:new Set(),modes:new Set()};seen[c].t++;seen[c].bands.add(q.band);seen[c].modes.add(q.mode);});
+  document.getElementById('ctb').innerHTML=Object.entries(seen).sort((a,b)=>b[1].t-a[1].t).slice(0,25).map(([c,d])=>
+    `<tr><td style="font-family:'Courier New',monospace;color:#2563eb">${c}</td><td class="tot">${d.t}</td><td style="color:#7c3aed">${d.bands.size}</td><td style="color:#15803d">${[...d.modes].join('/')}</td></tr>`
+  ).join('');
+}
+
+function tod(qsos) {
+  const hs=Array(24).fill(0);
+  qsos.forEach(q=>{hs[new Date(q.logged_at).getUTCHours()]++;});
+  const max=Math.max(...hs,1);
+  document.getElementById('tod').innerHTML=hs.map((n,h)=>{
+    const w=Math.round(n/max*100),col=n>0?(w>70?'#b45309':'#2563eb'):'#1a3050';
+    return`<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px"><div style="font-size:8px;color:#6b7280;width:18px;text-align:right;font-family:'Courier New',monospace">${String(h).padStart(2,'0')}</div><div style="flex:1;height:8px;background:#e5e7eb;border-radius:1px"><div style="height:8px;width:${w}%;background:${col};border-radius:1px"></div></div><div style="font-size:9px;color:#374151;width:24px;text-align:right;font-family:'Courier New',monospace">${n||''}</div></div>`;
+  }).join('');
+}
+
+load();
+setInterval(load,30000);
+
+// ── Goal Tracker ──────────────────────────────────────────────────────────────
+const GOAL_KEY = 'tl_goal_v1';
+let goalQsos = []; // kept in sync by load()
+
+function saveGoals() {
+  const g = {
+    days:  parseFloat(document.getElementById('goal-days').value)  || 10,
+    qsos:  parseInt(document.getElementById('goal-qsos').value)    || 50000,
+    start: document.getElementById('goal-start').value             || '',
+  };
+  localStorage.setItem(GOAL_KEY, JSON.stringify(g));
+}
+
+function loadGoals() {
+  const g = JSON.parse(localStorage.getItem(GOAL_KEY) || '{}');
+  if (g.days)  document.getElementById('goal-days').value  = g.days;
+  if (g.qsos)  document.getElementById('goal-qsos').value  = g.qsos;
+  if (g.start) document.getElementById('goal-start').value = g.start;
+  // Default start = first QSO time if none set
+  if (!g.start) {
+    fetch('/api/qsos').then(r=>r.json()).then(all=>{
+      const valid = all.filter(q=>!q.deleted&&!q.dupe_flag);
+      if (valid.length) {
+        const first = valid.sort((a,b)=>new Date(a.logged_at)-new Date(b.logged_at))[0];
+        const dt = new Date(first.logged_at);
+        // datetime-local format: YYYY-MM-DDTHH:MM
+        const pad = v=>String(v).padStart(2,'0');
+        document.getElementById('goal-start').value =
+          `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth()+1)}-${pad(dt.getUTCDate())}T${pad(dt.getUTCHours())}:${pad(dt.getUTCMinutes())}`;
+      }
+    }).catch(()=>{});
+  }
+}
+
+function buildGoalChart() {
+  const days      = parseFloat(document.getElementById('goal-days').value)  || 10;
+  const targetQ   = parseInt(document.getElementById('goal-qsos').value)    || 50000;
+  const startStr  = document.getElementById('goal-start').value;
+  const startTime = startStr ? new Date(startStr + ':00Z').getTime() : null;
+  const now       = Date.now();
+  const valid     = goalQsos.filter(q=>!q.deleted&&!q.dupe_flag);
+
+  // Effective start: use input or first QSO
+  let t0 = startTime;
+  if (!t0 && valid.length) {
+    t0 = Math.min(...valid.map(q=>new Date(q.logged_at).getTime()));
+  }
+  if (!t0) t0 = now - 3600000;
+
+  const endTime  = t0 + days * 86400000;
+  const totalMs  = endTime - t0;
+  const elapsedMs = Math.min(now - t0, totalMs);
+  const elapsedDays = elapsedMs / 86400000;
+
+  // Current actual QSOs (those within the expedition window)
+  const windowQsos = valid.filter(q => {
+    const qt = new Date(q.logged_at).getTime();
+    return qt >= t0 && qt <= now;
+  });
+  const actualTotal = windowQsos.length;
+
+  // Projected final count based on current rate
+  const daysLeft = Math.max((endTime - now) / 86400000, 0);
+  const avgPerDay = elapsedDays > 0 ? actualTotal / elapsedDays : 0;
+  const projected = Math.round(actualTotal + avgPerDay * daysLeft);
+  const pct = targetQ > 0 ? Math.round(actualTotal / targetQ * 100) : 0;
+  const onTrack = projected >= targetQ;
+  const neededPerDay = daysLeft > 0 ? Math.round((targetQ - actualTotal) / daysLeft) : 0;
+
+  // ── Summary cards ──────────────────────────────────────────────────────────
+  const cards = [
+    { val: actualTotal.toLocaleString(), lbl: 'QSOs Logged',   col: '#22c55e' },
+    { val: targetQ.toLocaleString(),     lbl: 'QSO Target',    col: '#4a9eff' },
+    { val: pct + '%',                    lbl: 'Target %',       col: pct >= 100 ? '#b45309' : '#111827' },
+    { val: projected.toLocaleString(),   lbl: 'Projected',      col: onTrack ? '#15803d' : '#dc2626' },
+    { val: Math.round(avgPerDay).toLocaleString(), lbl: 'QSOs/Day', col: '#b45309' },
+    { val: daysLeft > 0 ? daysLeft.toFixed(1) + 'd' : 'Done', lbl: 'Time Left', col: '#a78bfa' },
+  ];
+  document.getElementById('goal-cards').innerHTML = cards.map(c=>
+    `<div class="sc"><div class="sv" style="font-size:20px;color:${c.col}">${c.val}</div><div class="sl">${c.lbl}</div></div>`
+  ).join('');
+
+  // ── Canvas chart ───────────────────────────────────────────────────────────
+  const canvas = document.getElementById('goal-canvas');
+  const W = canvas.offsetWidth || 800;
+  const H = 220;
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  const PAD = { top:16, right:16, bottom:36, left:64 };
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top  - PAD.bottom;
+
+  // Y-axis max — headroom above target or projected
+  const yMax = Math.max(targetQ, projected, actualTotal) * 1.1;
+
+  function xOf(ms) { return PAD.left + ((ms - t0) / totalMs) * cW; }
+  function yOf(v)  { return PAD.top  + cH - (v / yMax) * cH; }
+
+  // Grid lines
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const v = (yMax / yTicks) * i;
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + cW, y); ctx.stroke();
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '10px "Courier New"';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(v).toLocaleString(), PAD.left - 6, y + 4);
+  }
+
+  // X-axis day ticks
+  const tickDays = days <= 7 ? 1 : days <= 14 ? 2 : days <= 30 ? 5 : 10;
+  for (let d = 0; d <= days; d += tickDays) {
+    const x = xOf(t0 + d * 86400000);
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top + cH); ctx.stroke();
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '10px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText('D' + d, x, PAD.top + cH + 14);
+  }
+
+  // Target line (straight diagonal)
+  ctx.strokeStyle = '#2563eb';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 3]);
+  ctx.beginPath();
+  ctx.moveTo(xOf(t0), yOf(0));
+  ctx.lineTo(xOf(endTime), yOf(targetQ));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Projected line from now to end (thinner, colour depends on on-track)
+  if (daysLeft > 0 && actualTotal > 0) {
+    ctx.strokeStyle = onTrack ? '#16a34a44' : '#dc262644';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(xOf(Math.min(now, endTime)), yOf(actualTotal));
+    ctx.lineTo(xOf(endTime), yOf(projected));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Actual QSO line — build cumulative series by hour
+  if (windowQsos.length > 0) {
+    const sorted = [...windowQsos].sort((a,b)=>new Date(a.logged_at)-new Date(b.logged_at));
+    ctx.strokeStyle = onTrack ? '#16a34a' : '#b45309';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(xOf(t0), yOf(0));
+    sorted.forEach((q,i) => {
+      const qt = new Date(q.logged_at).getTime();
+      ctx.lineTo(xOf(Math.min(qt, endTime)), yOf(i + 1));
+    });
+    ctx.stroke();
+  }
+
+  // "Now" vertical marker
+  if (now > t0 && now < endTime) {
+    ctx.strokeStyle = '#1e3a5f33';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(xOf(now), PAD.top);
+    ctx.lineTo(xOf(now), PAD.top + cH);
+    ctx.stroke();
+    ctx.fillStyle = '#1e3a5f66';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('NOW', xOf(now), PAD.top - 2);
+  }
+
+  // Legend
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  const leg = [
+    ['#4a9eff', '- - Target pace'],
+    [onTrack ? '#22c55e' : '#b45309', '\u2014\u2014 Actual'],
+    [onTrack ? '#22c55e55' : '#ef444455', '- - Projected'],
+  ];
+  let lx = PAD.left + 8;
+  leg.forEach(([col, label]) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(lx, PAD.top + 6, 16, 3);
+    ctx.fillStyle = '#374151';
+    ctx.fillText(label, lx + 20, PAD.top + 10);
+    lx += 120;
+  });
+
+  // ── Pace analysis ──────────────────────────────────────────────────────────
+  const r1h = valid.filter(q=>now-new Date(q.logged_at)<3600000).length;
+  const r24h = valid.filter(q=>now-new Date(q.logged_at)<86400000).length;
+  const pace = [
+    ['Actual QSOs',        actualTotal.toLocaleString()],
+    ['Target',             targetQ.toLocaleString()],
+    ['Remaining',          Math.max(0, targetQ - actualTotal).toLocaleString()],
+    ['Elapsed',            elapsedDays.toFixed(2) + ' days'],
+    ['Avg rate (all time)',Math.round(avgPerDay).toLocaleString() + ' QSOs/day'],
+    ['Rate last 24h',      r24h.toLocaleString() + ' QSOs/day'],
+    ['Rate last 1h (×24)', (r1h * 24).toLocaleString() + ' QSOs/day'],
+    ['Needed/day to hit target', daysLeft > 0 ? neededPerDay.toLocaleString() : '—'],
+    ['Projected total',    projected.toLocaleString()],
+    ['On track?',          onTrack ? '✓ Yes' : '✗ Behind'],
+  ];
+  document.getElementById('goal-pace').innerHTML = pace.map(([k,v])=>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0d1820;font-size:11px">
+      <span style="color:#6b7280">${k}</span>
+      <span style="color:${k==='On track?'?(onTrack?'#15803d':'#dc2626'):'#c9d8e8'};font-family:'Courier New',monospace">${v}</span>
+    </div>`
+  ).join('');
+
+  // ── Daily breakdown ────────────────────────────────────────────────────────
+  const dailyRows = [];
+  let cumul = 0;
+  for (let d = 0; d < days; d++) {
+    const dayStart = t0 + d * 86400000;
+    const dayEnd   = dayStart + 86400000;
+    const count    = windowQsos.filter(q => {
+      const qt = new Date(q.logged_at).getTime();
+      return qt >= dayStart && qt < dayEnd;
+    }).length;
+    cumul += count;
+    const targetAtDay = Math.round((d + 1) / days * targetQ);
+    const delta = cumul - targetAtDay;
+    const inFuture = dayStart > now;
+    const dt = new Date(dayStart);
+    const label = `${String(dt.getUTCMonth()+1).padStart(2,'0')}/${String(dt.getUTCDate()).padStart(2,'0')}`;
+    dailyRows.push({ label, count, cumul, targetAtDay, delta, inFuture });
+  }
+  document.getElementById('goal-daily').innerHTML = dailyRows.map(r=>
+    `<tr style="${r.inFuture?'opacity:.35':''}">
+      <td style="font-family:'Courier New',monospace;color:#374151">${r.label}</td>
+      <td class="tot">${r.inFuture?'':r.count}</td>
+      <td style="color:#2563eb">${r.inFuture?'':r.cumul.toLocaleString()}</td>
+      <td style="color:#6b7280">${r.targetAtDay.toLocaleString()}</td>
+      <td style="color:${r.delta>=0?'#15803d':'#dc2626'}">${r.inFuture?'':(r.delta>=0?'+':'')+r.delta.toLocaleString()}</td>
+    </tr>`
+  ).join('');
+}
+
+// Init goal tracker
+loadGoals();
+setTimeout(buildGoalChart, 600); // after first data load
+window.addEventListener('resize', buildGoalChart);
+
+</script>
+</body>
+</html>

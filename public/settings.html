@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Leader — Settings</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f3f4f6;color:#111827;min-height:100vh}
+
+header{background:#1e3a5f;color:#fff;padding:0 24px;height:52px;display:flex;align-items:center;gap:16px}
+header h1{font-size:16px;font-weight:700;letter-spacing:1px}
+header a{color:#93b4d4;font-size:13px;text-decoration:none;margin-left:auto}
+header a:hover{color:#fff}
+
+.page{max-width:720px;margin:32px auto;padding:0 20px 60px}
+
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:20px;overflow:hidden}
+.card-header{padding:14px 20px;border-bottom:1px solid #e5e7eb;background:#f9fafb;display:flex;align-items:center;gap:10px}
+.card-header h2{font-size:14px;font-weight:600;color:#111827}
+.card-header .badge{font-size:11px;background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;border-radius:4px;padding:2px 8px;font-weight:600}
+.card-header .badge.green{background:#dcfce7;color:#15803d;border-color:#86efac}
+.card-header .badge.amber{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.card-body{padding:20px}
+
+.field{margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+input[type=text],input[type=email],input[type=password],input[type=number]{width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;color:#111827;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s;font-family:inherit}
+input[type=text]:focus,input[type=email]:focus,input[type=password]:focus,input[type=number]:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+input.mono{font-family:'Courier New',monospace;font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.hint{font-size:11px;color:#9ca3af;margin-top:4px}
+.row{display:flex;gap:12px}
+.row .field{flex:1}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:13px;color:#374151;font-weight:500}
+.toggle-desc{font-size:11px;color:#9ca3af;margin-top:2px}
+.switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#d1d5db;border-radius:24px;cursor:pointer;transition:background .2s}
+.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+input:checked + .slider{background:#2563eb}
+input:checked + .slider:before{transform:translateX(20px)}
+
+#op-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:32px}
+.op-tag{display:flex;align-items:center;gap:4px;background:#eff6ff;border:1px solid #93c5fd;border-radius:4px;padding:3px 8px;font-family:'Courier New',monospace;font-size:13px;font-weight:700;color:#1d4ed8}
+.op-tag button{background:none;border:none;color:#93c5fd;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}
+.op-tag button:hover{color:#dc2626}
+.tag-input-row{display:flex;gap:8px}
+.tag-input-row input{flex:1;font-family:'Courier New',monospace;text-transform:uppercase;letter-spacing:1px}
+.tag-input-row button{padding:8px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.tag-input-row button:hover{background:#2d5a8e}
+
+.save-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;padding:12px 24px;display:flex;align-items:center;gap:12px;box-shadow:0 -2px 8px rgba(0,0,0,.06)}
+#save-btn{padding:9px 28px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+#save-btn:hover{background:#15803d}
+#save-btn:disabled{background:#9ca3af;cursor:default}
+#save-status{font-size:13px;color:#6b7280}
+#save-status.ok{color:#16a34a;font-weight:600}
+#save-status.err{color:#dc2626;font-weight:600}
+
+.section-note{font-size:12px;color:#9ca3af;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 14px;margin-bottom:16px}
+select{width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;color:#111827;background:#fff;outline:none;font-family:inherit}
+select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+
+/* ── FlexBridge styles ───────────────────────────────────── */
+.cat-mode-tabs{display:flex;gap:0;border:1px solid #d1d5db;border-radius:6px;overflow:hidden;margin-bottom:16px}
+.cat-mode-tab{flex:1;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:13px;font-weight:600;color:#6b7280;transition:all .15s;border-right:1px solid #d1d5db;text-align:center}
+.cat-mode-tab:last-child{border-right:none}
+.cat-mode-tab:hover{background:#f3f4f6;color:#374151}
+.cat-mode-tab.active{background:#fff;color:#1e3a5f;box-shadow:inset 0 -2px 0 #1e3a5f}
+.cat-mode-tab.active.flex-tab{background:#eff6ff;color:#1d4ed8;box-shadow:inset 0 -2px 0 #2563eb}
+
+.sub-panel{display:none}
+.sub-panel.visible{display:block}
+
+.flex-status-bar{display:flex;align-items:center;gap:10px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px 14px;margin-bottom:12px}
+.flex-status-bar.connected{background:#f0fdf4;border-color:#86efac}
+.flex-status-bar.error{background:#fff5f5;border-color:#fca5a5}
+.flex-dot{width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0;transition:all .3s}
+.flex-dot.ok{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.15)}
+.flex-dot.pulse{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.15);animation:dotpulse 1s ease-in-out infinite alternate}
+.flex-dot.err{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+@keyframes dotpulse{from{opacity:.5}to{opacity:1}}
+.flex-status-text{font-size:13px;font-weight:600;color:#374151;flex:1}
+.flex-status-meta{font-size:11px;color:#9ca3af;font-family:'Courier New',monospace}
+
+.daemon-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:12px}
+.daemon-label{font-size:12px;font-weight:600;color:#6b7280}
+.daemon-label.running{color:#15803d}
+.daemon-label.stopped{color:#6b7280}
+.dbtn{padding:5px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap}
+.dbtn.start{background:#16a34a;color:#fff;border-color:#16a34a}
+.dbtn.start:hover{background:#15803d}
+.dbtn.stop{background:#fff;color:#dc2626;border-color:#fca5a5}
+.dbtn.stop:hover{background:#fef2f2}
+.dbtn.restart{background:#fff;color:#1d4ed8;border-color:#93c5fd}
+.dbtn.restart:hover{background:#eff6ff}
+.dbtn:disabled{opacity:.5;cursor:not-allowed}
+
+.radio-list{border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin-bottom:8px}
+.radio-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background .1s}
+.radio-item:last-child{border-bottom:none}
+.radio-item:hover{background:#f9fafb}
+.radio-item.selected{background:#eff6ff}
+.radio-item-dot{width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0}
+.radio-item-name{font-weight:600;font-size:13px}
+.radio-item-meta{font-size:11px;color:#9ca3af;font-family:'Courier New',monospace}
+.radio-item-arrow{margin-left:auto;color:#d1d5db}
+.radio-empty{padding:12px;font-size:12px;color:#9ca3af;text-align:center}
+
+.port-box{display:flex;gap:8px;flex-wrap:wrap;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;margin-top:6px}
+.port-pill{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #d1d5db;border-radius:4px;padding:4px 10px;font-family:'Courier New',monospace;font-size:12px;color:#374151}
+.ptag{font-size:10px;padding:1px 5px;border-radius:3px;font-weight:700}
+.ptag-pty{background:#dcfce7;color:#15803d}
+.ptag-tcp{background:#dbeafe;color:#1d4ed8}
+.pcopy{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:11px;padding:0 2px}
+.pcopy:hover{color:#2563eb}
+
+.dax-row{display:flex;align-items:center;gap:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px}
+.dax-ch{font-family:'Courier New',monospace;font-weight:700;font-size:14px;color:#1d4ed8;width:30px}
+.dax-dev{font-size:12px;color:#374151;flex:1;font-family:'Courier New',monospace}
+.dax-stat{font-size:11px;padding:2px 7px;border-radius:3px;font-weight:600}
+.dax-stat.on{background:#dcfce7;color:#15803d}
+.dax-stat.off{background:#f3f4f6;color:#9ca3af}
+
+.test-row{display:flex;gap:8px;align-items:center;padding-top:12px;margin-top:12px;border-top:1px solid #f3f4f6;flex-wrap:wrap}
+.tbtn{padding:6px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;color:#374151;white-space:nowrap}
+.tbtn:hover{background:#e5e7eb}
+.tbtn.run{background:#1e3a5f;color:#fff;border-color:#1e3a5f}
+.tbtn.run:hover{background:#2d5a8e}
+.test-out{font-size:12px;font-family:'Courier New',monospace;color:#374151;padding:6px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;flex:1;min-width:120px;word-break:break-all}
+.test-out.ok{color:#15803d;background:#f0fdf4;border-color:#86efac}
+.test-out.err{color:#dc2626;background:#fff5f5;border-color:#fca5a5}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TEAM LEADER &mdash; Settings</h1>
+  <a href="/">&larr; Back to logger</a>
+</header>
+
+<div class="page">
+
+  <!-- Station Identity -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Station Identity</h2>
+      <span class="badge">Required</span>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="field">
+          <label>DXpedition Callsign</label>
+          <input type="text" id="callsign" class="mono" placeholder="VK0EK" maxlength="12"/>
+          <div class="hint">The callsign that will appear on all QSOs and ADIF exports</div>
+        </div>
+        <div class="field">
+          <label>This Station ID</label>
+          <input type="text" id="operatorId" class="mono" placeholder="OP1" maxlength="6"/>
+          <div class="hint">Unique ID for this laptop on the network (OP1, OP2, etc.)</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Contest / Event Name</label>
+        <input type="text" id="contestName" placeholder="DXpedition 2025"/>
+        <div class="hint">Optional — appears in ADIF header</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAT / Rig Control -->
+  <div class="card">
+    <div class="card-header">
+      <h2>CAT / Rig Control</h2>
+      <span class="badge amber" id="cat-badge">Disabled</span>
+    </div>
+    <div class="card-body">
+
+      <div class="toggle-row" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e5e7eb">
+        <div>
+          <div class="toggle-label">Enable CAT control</div>
+          <div class="toggle-desc">Reads frequency and mode from your rig automatically</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="catEnabled" onchange="updateCatBadge()"/>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <label style="margin-bottom:8px">Rig Interface</label>
+      <div class="cat-mode-tabs">
+        <button class="cat-mode-tab active" id="tab-standard" onclick="setCatMode('standard')">Standard Rig (rigctld / Hamlib)</button>
+        <button class="cat-mode-tab flex-tab" id="tab-flex" onclick="setCatMode('flex')">⚡ FlexRadio 6000 (FlexBridge)</button>
+      </div>
+
+      <!-- Standard rigctld -->
+      <div class="sub-panel visible" id="panel-standard">
+        <div class="section-note">
+          Requires <strong>rigctld</strong> (Hamlib) running separately.<br>
+          macOS: <code>brew install hamlib</code> &nbsp;·&nbsp; Linux: <code>sudo apt install hamlib-utils</code><br>
+          Then: <code>rigctld -m MODEL -r /dev/PORT -s BAUD -T 127.0.0.1 -t 4532</code>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>rigctld Host</label>
+            <input type="text" id="rigctldHost" placeholder="127.0.0.1"/>
+          </div>
+          <div class="field">
+            <label>rigctld Port</label>
+            <input type="number" id="rigctldPort" placeholder="4532" min="1024" max="65535"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Rig Model Number</label>
+          <input type="text" id="rigModel" placeholder="e.g. 3073" oninput="updateCatCommand()"/>
+          <div class="hint">IC-7300 = 3073 · IC-7610 = 3081 · FT-991A = 135 · TS-590SG = 2028 · K3/K3S = 229</div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Serial Port</label>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="serialPort" placeholder="/dev/cu.usbserial-XXXX" style="flex:1" oninput="updateCatCommand()"/>
+              <button onclick="scanPorts()" style="padding:8px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap">Scan</button>
+            </div>
+            <div id="port-scan-result" style="margin-top:6px;display:none"></div>
+          </div>
+          <div class="field">
+            <label>Baud Rate</label>
+            <select id="baudRate" onchange="updateCatCommand()">
+              <option>9600</option><option selected>19200</option>
+              <option>38400</option><option>57600</option><option>115200</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="rigctld-cmd-wrap" style="display:none">
+          <label>Generated command</label>
+          <div id="rigctld-cmd" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;font-family:'Courier New',monospace;font-size:12px;color:#374151;word-break:break-all"></div>
+        </div>
+      </div>
+
+      <!-- FlexBridge panel -->
+      <div class="sub-panel" id="panel-flex">
+
+        <!-- Status bar -->
+        <div class="flex-status-bar" id="flex-status-bar">
+          <div class="flex-dot" id="flex-dot"></div>
+          <div class="flex-status-text" id="flex-status-text">FlexBridge not running</div>
+          <div class="flex-status-meta" id="flex-status-meta"></div>
+        </div>
+
+        <!-- Debug log — helps diagnose connection issues -->
+        <div id="fb-debug-log" style="font-size:10px;font-family:'Courier New',monospace;color:#6b7280;padding:2px 0;min-height:14px;margin-bottom:4px"></div>
+
+        <!-- Daemon controls -->
+        <div class="daemon-row">
+          <span class="daemon-label stopped" id="flex-daemon-lbl">● Stopped</span>
+          <button class="dbtn start" id="fbtn-start"   onclick="fbStart()">Start FlexBridge</button>
+          <button class="dbtn stop"  id="fbtn-stop"    onclick="fbStop()"  style="display:none">Stop</button>
+          <button class="dbtn restart" id="fbtn-restart" onclick="fbRestart()" style="display:none">Restart</button>
+          <button class="dbtn" onclick="fbDiagnose()" style="background:#f3f4f6;color:#374151;border-color:#d1d5db;font-size:11px">Diagnose</button>
+          <span style="font-size:11px;color:#9ca3af;margin-left:auto;display:flex;align-items:center;gap:6px">
+            Auto-start:
+            <label class="switch" style="display:inline-flex;vertical-align:middle">
+              <input type="checkbox" id="flexAutoStart"/>
+              <span class="slider"></span>
+            </label>
+          </span>
+        </div>
+        <div class="section-note" style="margin-bottom:12px">
+          First time? Run <code>bash install-flexbridge.sh</code> once from the Team Leader folder, then click Start FlexBridge above.
+        </div>
+
+        <!-- Radio discovery -->
+        <div class="field">
+          <label>FlexRadio on Network</label>
+          <div class="radio-list" id="flex-radio-list">
+            <div class="radio-empty">Scanning for radios on LAN…</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <input type="text" id="flexRadioIp" placeholder="IP address (leave blank for auto-discover)" style="flex:1"/>
+            <button class="tbtn" onclick="fbRescan()" id="fbtn-rescan">Rescan</button>
+            <button class="tbtn run" onclick="fbConnect()">Connect</button>
+          </div>
+          <div class="hint">FlexRadio auto-discovery uses multicast on port 4992. If your radio isn't showing up, enter its IP address directly and click Connect.</div>
+        </div>
+
+        <!-- Port info (visible once connected) -->
+        <div id="flex-port-info" style="display:none" class="field">
+          <label>Connect Team Leader to FlexBridge</label>
+          <div class="port-box">
+            <div class="port-pill">
+              <span class="ptag ptag-pty">PTY</span>
+              <span id="flex-serial-path">/tmp/flexbridge/ttyCAT0</span>
+              <button class="pcopy" onclick="pcopy(this,'serial')" title="Copy">⎘</button>
+            </div>
+            <div class="port-pill">
+              <span class="ptag ptag-tcp">TCP</span>
+              <span>127.0.0.1:<span id="flex-tcp-port">4532</span></span>
+              <button class="pcopy" onclick="pcopy(this,'tcp')" title="Copy">⎘</button>
+            </div>
+            <div style="font-size:11px;color:#9ca3af;width:100%;margin-top:2px">
+              Set rig model to <strong>Kenwood TS-2000</strong> in your logging software
+            </div>
+          </div>
+        </div>
+
+        <!-- Slice & CAT port config -->
+        <div class="row">
+          <div class="field">
+            <label>CAT controls slice</label>
+            <select id="flexCatSlice">
+              <option value="0">Slice 0 (VFO-A)</option>
+              <option value="1">Slice 1 (VFO-B)</option>
+              <option value="2">Slice 2</option>
+              <option value="3">Slice 3</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>CAT TCP Port</label>
+            <input type="number" id="flexCatTcpPort" value="4532" min="1024" max="65535"/>
+            <div class="hint">Team Leader connects here</div>
+          </div>
+        </div>
+
+        <!-- DAX channels -->
+        <div class="field">
+          <label>DAX Audio Channels</label>
+          <div class="section-note" style="margin-bottom:8px">
+            Each channel creates a virtual soundcard device. Select <strong>flexdax.rx<em>N</em></strong> in WSJT-X, fldigi, or any audio app.
+          </div>
+          <div id="flex-dax-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <select id="flexAddDaxCh" style="width:auto;flex:1">
+              <option value="1">DAX Channel 1</option><option value="2">DAX Channel 2</option>
+              <option value="3">DAX Channel 3</option><option value="4">DAX Channel 4</option>
+            </select>
+            <button class="tbtn run" onclick="fbAddDax()">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Advanced -->
+        <details style="margin-top:4px">
+          <summary style="font-size:12px;font-weight:600;color:#374151;cursor:pointer;padding:8px 0;user-select:none">Advanced options</summary>
+          <div style="padding-top:12px">
+            <div class="row">
+              <div class="field">
+                <label>Base UDP port (DAX)</label>
+                <input type="number" id="flexBaseUdpPort" value="5000" min="1024"/>
+                <div class="hint">DAX channels bind here and above</div>
+              </div>
+              <div class="field">
+                <label>FlexBridge API port</label>
+                <input type="number" id="flexStatusPort" value="7376" min="1024"/>
+                <div class="hint">Internal REST port for this page</div>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Split mode (SO2R)</div><div class="toggle-desc">RX and TX on separate slices</div></div>
+              <label class="switch"><input type="checkbox" id="flexSplitMode"/><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><div class="toggle-label">Auto-reconnect</div><div class="toggle-desc">Reconnect if radio reboots or network drops</div></div>
+              <label class="switch"><input type="checkbox" id="flexAutoReconnect" checked/><span class="slider"></span></label>
+            </div>
+          </div>
+        </details>
+
+        <!-- CAT test terminal -->
+        <div class="test-row">
+          <input type="text" id="flex-cat-input" placeholder='Test CAT: "IF;" then Send'
+                 style="flex:1;font-family:monospace;padding:6px 10px;border:1px solid #d1d5db;border-radius:5px;font-size:13px;outline:none"
+                 onkeydown="if(event.key==='Enter')fbCat()"/>
+          <button class="tbtn run" onclick="fbCat()">Send</button>
+          <button class="tbtn" onclick="fbCat('IF;')">IF</button>
+          <button class="tbtn" onclick="fbCat('FA;')">FA</button>
+          <button class="tbtn" onclick="fbCat('ID;')">ID</button>
+        </div>
+        <div id="flex-cat-out" style="display:none;margin-top:6px" class="test-out"></div>
+
+      </div><!-- /panel-flex -->
+    </div>
+  </div>
+
+  <!-- Clublog -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Clublog Live Streaming</h2>
+      <span class="badge" id="cl-badge">Disabled</span>
+    </div>
+    <div class="card-body">
+      <div class="section-note">Streams each QSO to Clublog in real time. Requires internet on master station. Failed uploads retry automatically.</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Enable live streaming</div><div class="toggle-desc">Upload each QSO to Clublog immediately after logging</div></div>
+        <label class="switch"><input type="checkbox" id="clEnabled" onchange="updateClBadge()"/><span class="slider"></span></label>
+      </div>
+      <div style="margin-top:16px">
+        <div class="row">
+          <div class="field"><label>Clublog Callsign</label><input type="text" id="clCallsign" class="mono" placeholder="VK0EK"/></div>
+          <div class="field"><label>API Key</label><input type="text" id="clApiKey" placeholder="Your Clublog API key" autocomplete="off"/></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Email</label><input type="email" id="clEmail" placeholder="your@email.com" autocomplete="off"/></div>
+          <div class="field"><label>Password</label><input type="password" id="clPassword" placeholder="••••••••" autocomplete="new-password"/></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Network -->
+  <div class="card">
+    <div class="card-header"><h2>Network Ports</h2></div>
+    <div class="card-body">
+      <div class="section-note">Only change these if you have port conflicts. All stations must use the same ports.</div>
+      <div class="row">
+        <div class="field"><label>HTTP Port (frontend)</label><input type="number" id="httpPort" placeholder="7375" min="1024" max="65535"/></div>
+        <div class="field"><label>WebSocket Port (sync)</label><input type="number" id="wsPort" placeholder="7373" min="1024" max="65535"/></div>
+        <div class="field"><label>Peer Port</label><input type="number" id="catPort" placeholder="7374" min="1024" max="65535"/></div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <!-- CW / Keyer Settings -->
+  <div class="card">
+    <div class="card-header">
+      <h2>CW Keyer (ESM)</h2>
+      <span class="badge" id="cw-badge">Disabled</span>
+    </div>
+    <div class="section-note">
+      In CW mode: first Enter sends the Call macro, second Enter logs the QSO and sends TU. Escape clears the CW queue. Type <strong>ESM</strong> in the call box to toggle, <strong>WPM</strong> to set speed. Requires FlexBridge connected to a FlexRadio.
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Enable CW ESM</div><div class="toggle-desc">Auto-send CW via SmartSDR CWX when in CW mode</div></div>
+      <label class="switch"><input type="checkbox" id="cwEnabled" onchange="updateCwBadge()"/><span class="slider"></span></label>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>CW Speed (WPM)</label>
+        <input type="number" id="cwSpeed" value="25" min="5" max="60"/>
+        <div class="hint">Default speed — change live with WPM command in call box</div>
+      </div>
+      <div class="field">
+        <label>Sidetone Pitch (Hz)</label>
+        <input type="number" id="cwPitch" value="600" min="300" max="1000" step="50"/>
+        <div class="hint">SmartSDR sidetone frequency</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>CQ Macro</label>
+      <input type="text" id="cwCqMacro" value="CQ CQ {MYCALL} {MYCALL}" class="mono"/>
+      <div class="hint">Sent when Enter pressed with empty call box · Variables: {MYCALL} {OP}</div>
+    </div>
+    <div class="field">
+      <label>Call Macro</label>
+      <input type="text" id="cwCallMacro" value="{CALL} 5NN" class="mono"/>
+      <div class="hint">Sent on first Enter with callsign · Variables: {CALL} {RST} {NR} {OP} {MYCALL}</div>
+    </div>
+    <div class="field">
+      <label>TU Macro</label>
+      <input type="text" id="cwTuMacro" value="TU" class="mono"/>
+      <div class="hint">Sent after QSO is logged</div>
+    </div>
+    <div class="field">
+      <label>Extra Macros <span style="font-size:10px;color:#9ca3af">— shown as quick-send buttons in logger</span></label>
+      <div id="cw-macro-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+      <div class="row">
+        <div class="field">
+          <label>Button label</label>
+          <input type="text" id="cw-macro-label" placeholder="AGN"/>
+        </div>
+        <div class="field">
+          <label>CW text</label>
+          <input type="text" id="cw-macro-text" placeholder="AGN?" class="mono"/>
+        </div>
+        <div class="field" style="flex:0;padding-top:20px">
+          <button onclick="addCwMacro()" class="tbtn run">+ Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WSJT-X Integration -->
+  <div class="card">
+    <div class="card-header">
+      <h2>WSJT-X / FT8</h2>
+      <span class="badge" id="wsjt-badge">Disabled</span>
+    </div>
+    <div class="section-note">
+      When an operator switches to FT8 mode, Team Leader can auto-launch WSJT-X. QSOs logged in WSJT-X are picked up via UDP and automatically logged in Team Leader.
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Enable WSJT-X integration</div><div class="toggle-desc">Listen for QSOs and optionally auto-launch</div></div>
+      <label class="switch"><input type="checkbox" id="wsjtEnabled" onchange="updateWsjtBadge()"/><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Auto-launch on FT8</div><div class="toggle-desc">Start WSJT-X automatically when you switch to FT8 mode</div></div>
+      <label class="switch"><input type="checkbox" id="wsjtAutoLaunch"/><span class="slider"></span></label>
+    </div>
+    <div class="field">
+      <label>WSJT-X Binary Path</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="wsjtPath" placeholder="/Applications/wsjtx.app/Contents/MacOS/wsjtx" style="flex:1" class="mono"/>
+        <button onclick="wsjtLaunch()" class="tbtn run" id="wsjt-launch-btn">Launch</button>
+        <button onclick="wsjtStop()" class="tbtn" id="wsjt-stop-btn" style="display:none">Stop</button>
+      </div>
+      <div class="hint">macOS: /Applications/wsjtx.app/Contents/MacOS/wsjtx &nbsp;·&nbsp; Linux: /usr/bin/wsjtx</div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>WSJT-X UDP Port</label>
+        <input type="number" id="wsjtUdpPort" value="2237" min="1024" max="65535"/>
+        <div class="hint">Match "UDP Server port" in WSJT-X settings</div>
+      </div>
+      <div class="field">
+        <label>WSJT-X Status</label>
+        <div id="wsjt-status" style="font-size:12px;font-family:'Courier New',monospace;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:5px;color:#6b7280">Not running</div>
+      </div>
+    </div>
+    <div class="section-note" style="margin-top:4px">
+      In WSJT-X: <strong>File → Settings → Reporting</strong> → enable UDP server, set port to match above, enable "Accept UDP requests". Set <strong>Rig</strong> to "None" — Team Leader handles CAT via FlexBridge.
+    </div>
+  </div>
+
+  <!-- Network Log -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Network &amp; Command Log</h2>
+      <span class="badge" id="netlog-status" style="background:#fef3c7;color:#92400e;border-color:#fcd34d">Connecting...</span>
+      <button onclick="clearNetLog()" style="margin-left:auto;background:none;border:1px solid #d1d5db;border-radius:4px;padding:3px 10px;font-size:11px;color:#6b7280;cursor:pointer">Clear</button>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div id="netlog-wrap" style="height:320px;overflow-y:auto;font-family:'Courier New',monospace;font-size:11px;background:#0f172a;color:#94a3b8;padding:8px 12px">
+        <div style="color:#475569;padding:8px 0">Waiting for connection to server...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset -->
+  <div class="card" style="border-color:#fca5a5">
+    <div class="card-header" style="background:#fff5f5;border-bottom-color:#fca5a5">
+      <h2 style="color:#dc2626">&#9888; Reset Logger</h2>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13px;color:#374151;margin-bottom:16px">Permanently deletes the entire QSO log and resets all stations to a clean state.</p>
+      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:14px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">The following will be permanently deleted:</div>
+        <ul style="font-size:12px;color:#7f1d1d;line-height:2;padding-left:18px">
+          <li>All logged QSOs on this station's database</li>
+          <li>All operator messages (QST history)</li>
+          <li>Best-hour rate records &amp; DXCC achievement history</li>
+          <li>Goal tracker settings</li>
+        </ul>
+        <div style="font-size:12px;color:#dc2626;margin-top:8px;font-weight:600">&#9888; This cannot be undone.</div>
+      </div>
+      <div id="reset-confirm-box" style="display:none;background:#fff;border:2px solid #dc2626;border-radius:6px;padding:16px;margin-bottom:16px">
+        <label style="display:block;font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Type RESET to confirm</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="reset-confirm-input" placeholder="Type RESET here" autocomplete="off" autocorrect="off"
+            style="font-family:'Courier New',monospace;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;border-color:#fca5a5;flex:1"
+            oninput="checkResetConfirm()"/>
+          <button id="reset-execute-btn" onclick="executeReset()"
+            style="padding:8px 20px;background:#9ca3af;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:not-allowed;white-space:nowrap;transition:all .15s"
+            disabled>Wipe Log</button>
+        </div>
+        <button onclick="cancelReset()" style="margin-top:10px;background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;text-decoration:underline">Cancel</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button id="reset-start-btn" onclick="startReset()"
+          style="padding:9px 20px;background:#fff;border:2px solid #dc2626;border-radius:6px;font-size:13px;font-weight:700;color:#dc2626;cursor:pointer;transition:all .15s">
+          &#128465; Reset Logger to Factory Default
+        </button>
+        <a href="/api/export.adi" style="font-size:12px;color:#2563eb;text-decoration:none">&#8595; Export ADIF backup first</a>
+      </div>
+      <div id="reset-status" style="margin-top:10px;font-size:13px;display:none"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="save-bar">
+  <button id="save-btn" onclick="saveSettings()">Save Settings</button>
+  <span id="save-status">Changes are saved to config.json and take effect on next server restart.</span>
+</div>
+
+<script>
+'use strict';
+
+let operators = [];
+let catMode = 'standard';
+let flexDaxChs = [1];
+let fbPollTimer = null;
+let _fbPollFailCount = 0;
+const FB_FAIL_THRESHOLD = 4;
+
+// ── mode tabs ──────────────────────────────────────────────────────────
+function setCatMode(mode) {
+  catMode = mode;
+  document.getElementById('tab-standard').classList.toggle('active', mode === 'standard');
+  document.getElementById('tab-flex').classList.toggle('active', mode === 'flex');
+  document.getElementById('panel-standard').classList.toggle('visible', mode === 'standard');
+  document.getElementById('panel-flex').classList.toggle('visible', mode === 'flex');
+  updateCatBadge();
+  if (mode === 'flex') {
+    renderDaxList(); startFbPoll();
+    // Immediately fetch radios — don't wait for poll cycle
+    fetch('/api/fb/radios').then(r => r.ok ? r.json() : []).then(radios => {
+      if (Array.isArray(radios) && radios.length) renderRadioList(radios);
+    }).catch(() => {});
+  }
+  else stopFbPoll();
+}
+
+// ── load ───────────────────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const r   = await fetch('/api/config');
+    const cfg = await r.json();
+
+    document.getElementById('callsign').value    = cfg.callsign        || '';
+    document.getElementById('operatorId').value  = cfg.operatorId      || '';
+    document.getElementById('contestName').value = cfg.contest?.name   || '';
+    operators = cfg.operators || [];
+    renderTags();
+
+    const cat = cfg.cat || {};
+    document.getElementById('catEnabled').checked  = !!cat.enabled;
+    document.getElementById('rigctldHost').value   = cat.rigctldHost   || '127.0.0.1';
+    document.getElementById('rigctldPort').value   = cat.rigctldPort   || 4532;
+    document.getElementById('rigModel').value      = cat.rigModel      || '';
+    document.getElementById('serialPort').value    = cat.serialPort    || '';
+    for (const o of document.getElementById('baudRate').options)
+      if (o.value == (cat.baudRate || 19200)) o.selected = true;
+
+    const fb = cat.flexbridge || {};
+    if (cat.rigType === 'flex' || fb.enabled) setCatMode('flex');
+
+    document.getElementById('flexRadioIp').value     = fb.radioIp       || '';
+    document.getElementById('flexCatSlice').value    = fb.catSlice      || '0';
+    document.getElementById('flexCatTcpPort').value  = fb.catTcpPort    || 4532;
+    document.getElementById('flexBaseUdpPort').value = fb.baseUdpPort   || 5000;
+    document.getElementById('flexStatusPort').value  = fb.statusPort    || 7376;
+    document.getElementById('flexSplitMode').checked    = !!fb.splitMode;
+    document.getElementById('flexAutoReconnect').checked = fb.autoReconnect !== false;
+    document.getElementById('flexAutoStart').checked    = !!fb.autoStart;
+    flexDaxChs = fb.daxChannels || [1];
+    renderDaxList();
+    updateCatBadge();
+
+    const r2 = await fetch('/api/config-full');
+    if (r2.ok) {
+      const full = await r2.json();
+      const cl = full.clublog || {};
+      document.getElementById('clEnabled').checked  = !!cl.enabled;
+      document.getElementById('clCallsign').value   = cl.callsign || '';
+      document.getElementById('clApiKey').value     = cl.apiKey   || '';
+      document.getElementById('clEmail').value      = cl.email    || '';
+      document.getElementById('clPassword').value   = cl.password || '';
+      updateClBadge();
+    }
+
+    const net = cfg.network || {};
+    document.getElementById('httpPort').value = net.httpPort || 7375;
+    document.getElementById('wsPort').value   = net.wsPort   || 7373;
+    document.getElementById('catPort').value  = net.catPort  || 7374;
+
+    // CW settings
+    const cw = cfg.cw || {};
+    document.getElementById('cwEnabled').checked   = !!cw.enabled;
+    document.getElementById('cwSpeed').value        = cw.speed      || 25;
+    document.getElementById('cwPitch').value        = cw.pitch      || 600;
+    document.getElementById('cwCallMacro').value    = cw.callMacro  || '{CALL} 5NN';
+    document.getElementById('cwTuMacro').value      = cw.tuMacro    || 'TU';
+    document.getElementById('cwCqMacro').value      = cw.cqMacro    || 'CQ CQ {MYCALL} {MYCALL}';
+    _cwMacros = cw.macros || [];
+    renderCwMacroList();
+    updateCwBadge();
+
+    // WSJT-X settings
+    const wsjt = cfg.wsjt || {};
+    document.getElementById('wsjtEnabled').checked    = !!wsjt.enabled;
+    document.getElementById('wsjtAutoLaunch').checked = !!wsjt.autoLaunch;
+    document.getElementById('wsjtPath').value          = wsjt.binaryPath || '';
+    document.getElementById('wsjtUdpPort').value       = wsjt.udpPort    || 2237;
+    updateWsjtBadge();
+    pollWsjtStatus();
+
+  } catch(e) { setSaveStatus('Error loading config: ' + e.message, 'err'); }
+}
+
+// ── operators ──────────────────────────────────────────────────────────
+function renderTags() {
+  document.getElementById('op-tags').innerHTML = operators.map((op, i) =>
+    `<div class="op-tag">${op}<button onclick="removeOp(${i})">&#x2715;</button></div>`).join('');
+}
+function addOperator() {
+  const v = document.getElementById('op-input').value.trim().toUpperCase();
+  if (v && !operators.includes(v)) { operators.push(v); renderTags(); }
+  document.getElementById('op-input').value = '';
+  document.getElementById('op-input').focus();
+}
+function removeOp(i) { operators.splice(i, 1); renderTags(); }
+document.getElementById('op-input').addEventListener('keydown', e => { if (e.key==='Enter'){e.preventDefault();addOperator();} });
+
+// ── badges ─────────────────────────────────────────────────────────────
+function updateCatBadge() {
+  const el = document.getElementById('cat-badge');
+  const on = document.getElementById('catEnabled').checked;
+  el.textContent = on ? (catMode === 'flex' ? 'FlexRadio' : 'Enabled') : 'Disabled';
+  el.className   = 'badge ' + (on ? 'green' : 'amber');
+}
+function updateClBadge() {
+  const on = document.getElementById('clEnabled').checked;
+  const el = document.getElementById('cl-badge');
+  el.textContent = on ? 'Enabled' : 'Disabled';
+  el.className   = 'badge ' + (on ? 'green' : '');
+}
+
+// ── CAT command preview ────────────────────────────────────────────────
+function updateCatCommand() {
+  const model = document.getElementById('rigModel').value.trim();
+  const port  = document.getElementById('serialPort').value.trim();
+  const baud  = document.getElementById('baudRate').value;
+  const host  = document.getElementById('rigctldHost').value.trim() || '127.0.0.1';
+  const rport = document.getElementById('rigctldPort').value || '4532';
+  const wrap  = document.getElementById('rigctld-cmd-wrap');
+  if (model && port) {
+    wrap.style.display = 'block';
+    document.getElementById('rigctld-cmd').textContent = `rigctld -m ${model} -r ${port} -s ${baud} -T ${host} -t ${rport}`;
+  } else { wrap.style.display = 'none'; }
+}
+['rigModel','serialPort','baudRate','rigctldHost','rigctldPort'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) { el.addEventListener('change', updateCatCommand); el.addEventListener('input', updateCatCommand); }
+});
+
+async function scanPorts() {
+  const btn = event.target; btn.textContent='Scanning…'; btn.disabled=true;
+  try {
+    const { ports } = await (await fetch('/api/cat-ports')).json();
+    const wrap = document.getElementById('port-scan-result');
+    wrap.style.display = 'block';
+    wrap.innerHTML = ports.length
+      ? '<div style="font-size:12px;color:#374151;margin-bottom:4px">Found '+ports.length+' port(s):</div>'
+        + ports.map(p=>`<button onclick="document.getElementById('serialPort').value='${p}';updateCatCommand()" style="display:block;width:100%;text-align:left;padding:6px 10px;margin-bottom:3px;background:#eff6ff;border:1px solid #93c5fd;border-radius:4px;font-family:'Courier New',monospace;font-size:12px;cursor:pointer;color:#1d4ed8">${p}</button>`).join('')
+      : '<div style="font-size:12px;color:#dc2626">No USB serial ports found.</div>';
+  } catch {}
+  btn.textContent='Scan'; btn.disabled=false;
+}
+
+// ── FlexBridge status poll ─────────────────────────────────────────────
+function fbApiBase() {
+  // All FlexBridge calls proxied through Team Leader server at /api/fb/*
+  // Avoids any browser→port 7376 connectivity issues entirely
+  return `${location.protocol}//${location.host}/api/fb`;
+}
+function startFbPoll() {
+  // Always restart cleanly — clear any existing timer
+  if (fbPollTimer) { clearInterval(fbPollTimer); fbPollTimer = null; }
+  // Don't call fbPoll() immediately here — let the interval handle it
+  // to avoid double-polling race conditions
+  fbPollTimer = setInterval(fbPoll, 2500);
+  // First poll after a short delay so FlexBridge has time to bind its port
+  setTimeout(fbPoll, 500);
+}
+function stopFbPoll()  { if (fbPollTimer) { clearInterval(fbPollTimer); fbPollTimer=null; } }
+
+
+function fbLog(msg) {
+  const el = document.getElementById('fb-debug-log');
+  if (!el) return;
+  const now = new Date().toTimeString().slice(0,8);
+  el.textContent = now + ' ' + msg;
+}
+
+async function fbPoll() {
+  const base = fbApiBase();
+  let statusOk = false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    fbLog('Polling ' + base + '/status...');
+    const r = await fetch(base + '/status', { signal: controller.signal });
+    clearTimeout(timer);
+    fbLog('Response: HTTP ' + r.status);
+    if (r.status === 503 || r.status === 504) {
+      // FlexBridge proxy responded but FlexBridge not yet ready — silently wait
+      fbLog('Waiting for FlexBridge... (HTTP ' + r.status + ')');
+      return; // don't count as failure, keep polling
+    }
+    if (r.ok) {
+      const d = await r.json();
+      _fbPollFailCount = 0;
+      statusOk = true;
+      fbLog('OK — connected=' + d.connected);
+      setFbStatus(d, true);
+    } else {
+      fbLog('HTTP error: ' + r.status);
+    }
+  } catch(e) {
+    fbLog('Fetch error: ' + (e.name === 'AbortError' ? 'timeout' : e.message));
+  }
+
+  if (!statusOk) {
+    _fbPollFailCount++;
+    fbLog('Fail #' + _fbPollFailCount + ' of ' + FB_FAIL_THRESHOLD);
+    if (_fbPollFailCount >= FB_FAIL_THRESHOLD) {
+      setFbStatus(null, false);
+    }
+    return;
+  }
+
+  try {
+    const [rr, dr] = await Promise.all([
+      fetch(base + '/radios').catch(() => null),
+      fetch(base + '/dax/stats').catch(() => null),
+    ]);
+    if (rr?.ok) {
+      try {
+        const radios = await rr.json();
+        fbLog('Radios: got ' + (Array.isArray(radios) ? radios.length + ' radio(s)' : typeof radios + ': ' + JSON.stringify(radios).slice(0,80)));
+        renderRadioList(radios);
+      } catch(e) { fbLog('Radio list parse error: ' + e.message); }
+    } else {
+      const errBody = rr ? await rr.text().catch(()=>'') : '';
+      fbLog('Radios fetch: ' + (rr ? 'HTTP ' + rr.status + ' ' + errBody.slice(0,60) : 'null'));
+    }
+    if (dr?.ok) updateDaxStats(await dr.json());
+  } catch(e) { fbLog('Radios/DAX fetch error: ' + e.message); }
+}
+
+function setFbStatus(data, running) {
+  const bar  = document.getElementById('flex-status-bar');
+  const dot  = document.getElementById('flex-dot');
+  const txt  = document.getElementById('flex-status-text');
+  const meta = document.getElementById('flex-status-meta');
+  const lbl  = document.getElementById('flex-daemon-lbl');
+  const bStart   = document.getElementById('fbtn-start');
+  const bStop    = document.getElementById('fbtn-stop');
+  const bRestart = document.getElementById('fbtn-restart');
+  const portInfo = document.getElementById('flex-port-info');
+
+  if (!running) {
+    bar.className='flex-status-bar error'; dot.className='flex-dot err';
+    txt.textContent='FlexBridge not running'; meta.textContent='';
+    lbl.textContent='● Stopped'; lbl.className='daemon-label stopped';
+    bStart.style.display=''; bStop.style.display='none'; bRestart.style.display='none';
+    portInfo.style.display='none';
+    return;
+  }
+  const conn = data?.connected;
+  bar.className = conn ? 'flex-status-bar connected' : 'flex-status-bar';
+  dot.className = conn ? 'flex-dot ok' : 'flex-dot pulse';
+  txt.textContent = conn ? `Connected — ${data.radio_ip}` : 'Running — waiting for radio…';
+  meta.textContent = conn ? (data.protocol_version||'') : '';
+  lbl.textContent='● Running'; lbl.className='daemon-label running';
+  bStart.style.display='none'; bStop.style.display=''; bRestart.style.display='';
+  if (conn && data.cat) {
+    portInfo.style.display='';
+    document.getElementById('flex-serial-path').textContent = data.cat.serial_symlink||'/tmp/flexbridge/ttyCAT0';
+    document.getElementById('flex-tcp-port').textContent    = data.cat.tcp_port||4532;
+  } else { portInfo.style.display='none'; }
+}
+
+var _lastRadioList = [];
+function renderRadioList(radios) {
+  if (!Array.isArray(radios)) radios = [];
+  _lastRadioList = radios;
+  const list = document.getElementById('flex-radio-list');
+  if (!radios.length) { list.innerHTML='<div class="radio-empty">No FlexRadio found — click Rescan or enter IP manually</div>'; return; }
+  const selIp = document.getElementById('flexRadioIp').value;
+  list.innerHTML = radios.map(r => {
+    const isSel = r.ip === selIp;
+    // A "suspicious" name is just a number or very short — likely a slave/aux device
+    const name = r.model && r.model !== 'FlexRadio' ? r.model : '';
+    const looksLikeSlave = name && /^\d+$/.test(name.trim());
+    const displayName = name ? name + ' — ' + r.ip : r.ip;
+    const badge = looksLikeSlave
+      ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 5px;margin-left:6px">aux device?</span>'
+      : '';
+    return `<div class="radio-item ${isSel?'selected':''}" onclick="selectRadio('${r.ip}')"
+      style="${isSel?'background:#eff6ff;border-left:3px solid #2563eb;':''}">
+      <div class="radio-item-dot"></div>
+      <div style="flex:1">
+        <div class="radio-item-name">${displayName}${badge}</div>
+        <div class="radio-item-meta">SmartSDR ${r.version||'?'} &nbsp;·&nbsp; ${isSel?'<strong style=color:#2563eb>SELECTED — click Connect</strong>':'click to select'}</div>
+      </div>
+      <span class="radio-item-arrow" style="${isSel?'color:#2563eb':''}">›</span>
+    </div>`;
+  }).join('');
+}
+function selectRadio(ip) {
+  document.getElementById('flexRadioIp').value = ip;
+  renderRadioList(_lastRadioList);
+  // Pulse the Connect button to guide the user
+  const btn = document.querySelector('[onclick="fbConnect()"]');
+  if (btn) { btn.style.background='#1d4ed8'; btn.style.color='#fff';
+    setTimeout(()=>{ btn.style.background=''; btn.style.color=''; }, 1500); }
+}
+
+// ── Daemon controls ────────────────────────────────────────────────────
+async function fbStart() {
+  const b = document.getElementById('fbtn-start');
+  const dot = document.getElementById('flex-dot');
+  const txt = document.getElementById('flex-status-text');
+  const bar = document.getElementById('flex-status-bar');
+  b.textContent='Starting…'; b.disabled=true;
+  dot.className='flex-dot pulse';
+  txt.textContent='Starting FlexBridge…';
+  bar.className='flex-status-bar';
+  _fbPollFailCount = 0;
+  fbLog('Sending start command...');
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch('/api/flexbridge/start', { method:'POST', signal: ctrl.signal });
+    clearTimeout(t);
+    fbLog('Start response: HTTP ' + r.status);
+    if (!r.ok) {
+      const d = await r.json().catch(()=>({}));
+      fbStatusErr(d.error || 'Start failed — see server console');
+      bar.className = 'flex-status-bar error';
+    } else {
+      fbLog('Start OK — polling...');
+      startFbPoll();
+    }
+  } catch(e) {
+    fbLog('Start error: ' + e.message);
+    fbStatusErr('Cannot reach Team Leader server');
+  }
+  b.textContent='Start FlexBridge'; b.disabled=false;
+}
+async function fbStop() {
+  const b = document.getElementById('fbtn-stop'); b.textContent='Stopping…'; b.disabled=true;
+  try { await fetch('/api/flexbridge/stop', { method:'POST' }); } catch {}
+  stopFbPoll();
+  setFbStatus(null, false);
+  b.textContent='Stop'; b.disabled=false;
+}
+async function fbRestart() {
+  const b = document.getElementById('fbtn-restart'); b.textContent='Restarting…'; b.disabled=true;
+  await fbStop();
+  await new Promise(r=>setTimeout(r,2000)); // wait for stop + port release
+  await fbStart();
+  b.textContent='Restart'; b.disabled=false;
+}
+async function fbRescan() {
+  const btn = document.getElementById('fbtn-rescan');
+  btn.textContent = 'Scanning…'; btn.disabled = true;
+  document.getElementById('flex-radio-list').innerHTML = '<div class="radio-empty">Scanning LAN for FlexRadios…</div>';
+  try {
+    // Kick off a rescan — don't abort early, let the proxy timeout handle it
+    await fetch(fbApiBase() + '/radios/rescan').catch(() => {});
+    // Wait for the scan to complete, then fetch results
+    await new Promise(r => setTimeout(r, 5000));
+    const rr = await fetch(fbApiBase() + '/radios');
+    if (rr.ok) {
+      const radios = await rr.json();
+      renderRadioList(Array.isArray(radios) ? radios : []);
+    } else {
+      document.getElementById('flex-radio-list').innerHTML = '<div class="radio-empty">No radios found — enter IP manually</div>';
+    }
+  } catch(e) {
+    fbLog('Rescan error: ' + e.message);
+    // Don't claim FlexBridge isn't running — status poll determines that
+    document.getElementById('flex-radio-list').innerHTML = '<div class="radio-empty">Scan failed — try again or enter IP manually</div>';
+  }
+  btn.textContent = 'Rescan'; btn.disabled = false;
+}
+
+async function fbConnect() {
+  const ip = document.getElementById('flexRadioIp').value.trim();
+  if (!ip) {
+    fbStatusErr('Select a radio from the list above first, then click Connect');
+    document.getElementById('flex-status-bar').className = 'flex-status-bar error';
+    return;
+  }
+  document.getElementById('flex-status-text').textContent = 'Connecting to ' + ip + '...';
+  try {
+    const r = await fetch(fbApiBase()+'/radio/connect', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ ip })
+    });
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok) { fbStatusErr(d.error || 'Connect failed'); return; }
+    setTimeout(fbPoll, 800);
+  } catch { fbStatusErr('FlexBridge not running — start it first'); }
+}
+function fbStatusErr(msg) { document.getElementById('flex-status-text').textContent = '⚠ '+msg; }
+
+async function fbDiagnose() {
+  fbLog('Testing direct spawn...');
+  try {
+    // First try the direct test spawn
+    const tr = await fetch('/api/flexbridge/test', {method:'POST'});
+    const td = await tr.json();
+    if (td.ok) {
+      fbLog('Direct spawn OK — PID ' + td.pid + ' — python3: ' + td.python3);
+      alert('FlexBridge TEST SPAWN OK\n\nPID: ' + td.pid + '\nPython: ' + td.python3 + '\nScript: ' + td.script + '\n\nFlexBridge is starting — status will update shortly.');
+      _fbPollFailCount = 0;
+      startFbPoll();
+      return;
+    }
+    // If test failed, run diagnostics
+    const r = await fetch('/api/flexbridge/diagnose');
+    const d = await r.json();
+    const p = d.procRunning ? 'Process: PID ' + d.pid : 'Process: NOT RUNNING';
+    const t = d.tcp && d.tcp.tcp ? 'TCP: OPEN' : ('TCP: CLOSED - ' + (d.tcp && d.tcp.tcpError));
+    const hh = d.http && d.http.http ? 'HTTP: OK ' + d.http.statusCode : ('HTTP: FAIL - ' + (d.http && d.http.httpError));
+    fbLog(p + ' | ' + t + ' | ' + hh);
+    alert('FlexBridge Diagnostics\n\n' + p + '\n' + t + '\n' + hh + '\n\nTest spawn error: ' + td.error);
+  } catch(e) {
+    fbLog('Diagnose error: ' + e.message);
+    alert('Diagnose failed: ' + e.message);
+  }
+}
+
+// ── DAX list ───────────────────────────────────────────────────────────
+function renderDaxList() {
+  const list = document.getElementById('flex-dax-list');
+  if (!flexDaxChs.length) {
+    list.innerHTML='<div style="font-size:12px;color:#9ca3af">No DAX channels configured. Add one below.</div>'; return;
+  }
+  list.innerHTML = flexDaxChs.map(ch=>`
+    <div class="dax-row">
+      <span class="dax-ch">CH ${ch}</span>
+      <span class="dax-dev">flexdax.rx${ch}</span>
+      <span class="dax-stat off" id="dax-stat-${ch}">idle</span>
+      <button onclick="fbRemoveDax(${ch})" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:14px;padding:2px 4px">✕</button>
+    </div>`).join('');
+}
+function fbAddDax() {
+  const ch = parseInt(document.getElementById('flexAddDaxCh').value);
+  if (!flexDaxChs.includes(ch)) { flexDaxChs.push(ch); flexDaxChs.sort((a,b)=>a-b); renderDaxList(); }
+}
+function fbRemoveDax(ch) { flexDaxChs = flexDaxChs.filter(c=>c!==ch); renderDaxList(); }
+function updateDaxStats(stats) {
+  for (const [ch, s] of Object.entries(stats)) {
+    const el = document.getElementById(`dax-stat-${ch}`);
+    if (el) { const on = s.rx_packets>0; el.textContent=on?`${s.rx_packets} pkts`:'idle'; el.className='dax-stat '+(on?'on':'off'); }
+  }
+}
+
+// ── CAT test terminal ──────────────────────────────────────────────────
+async function fbCat(preset) {
+  const input = document.getElementById('flex-cat-input');
+  const cmd = preset || input.value.trim();
+  if (!cmd) return;
+  if (!preset) input.value = '';
+  const out = document.getElementById('flex-cat-out');
+  out.style.display='block'; out.textContent='Sending…'; out.className='test-out';
+  try {
+    const r = await fetch(fbApiBase()+'/cat/command', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ command: cmd })
+    });
+    if (r.ok) { const d=await r.json(); out.textContent='← '+(d.response||'(no response)'); out.className='test-out ok'; }
+    else throw new Error('HTTP '+r.status);
+  } catch(e) { out.textContent='✗ '+e.message+' — is FlexBridge running?'; out.className='test-out err'; }
+}
+document.getElementById('flex-cat-input').addEventListener('keydown', e => { if (e.key==='Enter') fbCat(); });
+
+// ── Copy port paths ────────────────────────────────────────────────────
+function pcopy(btn, type) {
+  const text = type==='serial'
+    ? document.getElementById('flex-serial-path').textContent
+    : '127.0.0.1:'+document.getElementById('flex-tcp-port').textContent;
+  navigator.clipboard.writeText(text).catch(()=>{});
+  btn.textContent='✓'; setTimeout(()=>btn.textContent='⎘', 1200);
+}
+
+// ── Collect FlexBridge config ──────────────────────────────────────────
+function collectFb() {
+  return {
+    enabled:       catMode==='flex' && document.getElementById('catEnabled').checked,
+    radioIp:       document.getElementById('flexRadioIp').value.trim(),
+    catSlice:      parseInt(document.getElementById('flexCatSlice').value)||0,
+    catTcpPort:    parseInt(document.getElementById('flexCatTcpPort').value)||4532,
+    baseUdpPort:   parseInt(document.getElementById('flexBaseUdpPort').value)||5000,
+    statusPort:    parseInt(document.getElementById('flexStatusPort').value)||7376,
+    splitMode:     document.getElementById('flexSplitMode').checked,
+    autoReconnect: document.getElementById('flexAutoReconnect').checked,
+    autoStart:     document.getElementById('flexAutoStart').checked,
+    daxChannels:   flexDaxChs,
+  };
+}
+
+async function fbSaveConfig() {
+  await fetch('/api/settings', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ cat: {
+      enabled: document.getElementById('catEnabled').checked,
+      rigType: catMode, flexbridge: collectFb(),
+      rigctldHost: document.getElementById('rigctldHost').value.trim()||'127.0.0.1',
+      rigctldPort: parseInt(document.getElementById('rigctldPort').value)||4532,
+      rigModel:    document.getElementById('rigModel').value.trim(),
+      serialPort:  document.getElementById('serialPort').value.trim(),
+      baudRate:    parseInt(document.getElementById('baudRate').value),
+    }})
+  });
+}
+
+// ── Main save ──────────────────────────────────────────────────────────
+async function saveSettings() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled=true; btn.textContent='Saving…';
+  setSaveStatus('','');
+
+  try {
+    const payload = {
+      callsign:   document.getElementById('callsign').value.trim().toUpperCase(),
+      operatorId: document.getElementById('operatorId').value.trim().toUpperCase(),
+      contest:    { name: document.getElementById('contestName').value.trim() },
+      operators,
+      cat: {
+        enabled:     document.getElementById('catEnabled').checked,
+        rigType:     catMode,
+        flexbridge:  collectFb(),
+        rigctldHost: document.getElementById('rigctldHost').value.trim()||'127.0.0.1',
+        rigctldPort: parseInt(document.getElementById('rigctldPort').value)||4532,
+        rigModel:    document.getElementById('rigModel').value.trim(),
+        serialPort:  document.getElementById('serialPort').value.trim(),
+        baudRate:    parseInt(document.getElementById('baudRate').value),
+      },
+      clublog: {
+        enabled:  document.getElementById('clEnabled').checked,
+        callsign: document.getElementById('clCallsign').value.trim().toUpperCase(),
+        apiKey:   document.getElementById('clApiKey').value.trim(),
+        email:    document.getElementById('clEmail').value.trim(),
+        password: document.getElementById('clPassword').value,
+      },
+      network: {
+        httpPort: parseInt(document.getElementById('httpPort').value)||7375,
+        wsPort:   parseInt(document.getElementById('wsPort').value)||7373,
+        catPort:  parseInt(document.getElementById('catPort').value)||7374,
+      },
+      cw: {
+        enabled:    document.getElementById('cwEnabled').checked,
+        speed:      parseInt(document.getElementById('cwSpeed').value)||25,
+        pitch:      parseInt(document.getElementById('cwPitch').value)||600,
+        callMacro:  document.getElementById('cwCallMacro').value.trim() || '{CALL} 5NN',
+        tuMacro:    document.getElementById('cwTuMacro').value.trim()   || 'TU',
+        cqMacro:    document.getElementById('cwCqMacro').value.trim()   || 'CQ CQ {MYCALL} {MYCALL}',
+        macros:     _cwMacros,
+      },
+      wsjt: {
+        enabled:     document.getElementById('wsjtEnabled').checked,
+        autoLaunch:  document.getElementById('wsjtAutoLaunch').checked,
+        binaryPath:  document.getElementById('wsjtPath').value.trim(),
+        udpPort:     parseInt(document.getElementById('wsjtUdpPort').value)||2237,
+      }
+    };
+
+    if (!payload.callsign) { setSaveStatus('Callsign is required.','err'); return; }
+
+    const r = await fetch('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const result = await r.json();
+    if (result.ok) { setSaveStatus('✓ Saved. Restart the server for port changes to take effect.','ok'); updateCatBadge(); }
+    else setSaveStatus('Error: '+result.error,'err');
+  } catch(e) { setSaveStatus('Save failed: '+e.message,'err'); }
+  finally { btn.disabled=false; btn.textContent='Save Settings'; }
+}
+function setSaveStatus(msg, cls) { const el=document.getElementById('save-status'); el.textContent=msg; el.className=cls||''; }
+
+// ── CW settings ─────────────────────────────────────────────────────────────
+var _cwMacros = [];
+
+function updateCwBadge() {
+  const on = document.getElementById('cwEnabled').checked;
+  const el = document.getElementById('cw-badge');
+  el.textContent = on ? 'Enabled' : 'Disabled';
+  el.className   = 'badge ' + (on ? 'green' : '');
+}
+
+function addCwMacro() {
+  const label = document.getElementById('cw-macro-label').value.trim();
+  const text  = document.getElementById('cw-macro-text').value.trim();
+  if (!label || !text) return;
+  _cwMacros.push({ label, text });
+  document.getElementById('cw-macro-label').value = '';
+  document.getElementById('cw-macro-text').value  = '';
+  renderCwMacroList();
+}
+
+function removeCwMacro(i) { _cwMacros.splice(i, 1); renderCwMacroList(); }
+
+function renderCwMacroList() {
+  const list = document.getElementById('cw-macro-list');
+  if (!_cwMacros.length) {
+    list.innerHTML = '<div class="section-note" style="margin-bottom:0;color:#9ca3af">No extra macros — add one below.</div>';
+    return;
+  }
+  list.innerHTML = _cwMacros.map((m,i)=>`
+    <div class="dax-row">
+      <span class="dax-ch" style="width:auto;min-width:60px">${m.label}</span>
+      <code class="dax-dev">${m.text}</code>
+      <button onclick="removeCwMacro(${i})" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:16px;padding:0 4px" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+// ── WSJT-X settings ──────────────────────────────────────────────────────────
+function updateWsjtBadge() {
+  const on = document.getElementById('wsjtEnabled').checked;
+  const el = document.getElementById('wsjt-badge');
+  el.textContent = on ? 'Enabled' : 'Disabled';
+  el.className   = 'badge ' + (on ? 'green' : '');
+}
+
+async function wsjtLaunch() {
+  const btn = document.getElementById('wsjt-launch-btn');
+  btn.textContent = 'Launching…'; btn.disabled = true;
+  try {
+    const r = await fetch('/api/wsjt/launch', { method:'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('wsjt-status').textContent = `Running — PID ${d.pid}`;
+      document.getElementById('wsjt-status').style.color = '#15803d';
+      btn.style.display = 'none';
+      document.getElementById('wsjt-stop-btn').style.display = '';
+    } else {
+      document.getElementById('wsjt-status').textContent = '✗ ' + (d.error||'Launch failed');
+      document.getElementById('wsjt-status').style.color = '#dc2626';
+    }
+  } catch(e) { document.getElementById('wsjt-status').textContent = '✗ ' + e.message; }
+  btn.textContent = 'Launch'; btn.disabled = false;
+}
+
+async function wsjtStop() {
+  await fetch('/api/wsjt/stop', { method:'POST' });
+  document.getElementById('wsjt-status').textContent = 'Stopped';
+  document.getElementById('wsjt-status').style.color = '#6b7280';
+  document.getElementById('wsjt-stop-btn').style.display = 'none';
+  document.getElementById('wsjt-launch-btn').style.display = '';
+}
+
+async function pollWsjtStatus() {
+  try {
+    const r = await fetch('/api/wsjt/status');
+    const d = await r.json();
+    const el = document.getElementById('wsjt-status');
+    if (el) {
+      el.textContent = d.running ? `Running — PID ${d.pid}` : 'Not running';
+      el.style.color = d.running ? '#15803d' : '#6b7280';
+      const lb = document.getElementById('wsjt-launch-btn');
+      const sb = document.getElementById('wsjt-stop-btn');
+      if (lb) lb.style.display = d.running ? 'none' : '';
+      if (sb) sb.style.display = d.running ? '' : 'none';
+    }
+  } catch {}
+}
+setInterval(pollWsjtStatus, 5000);
+
+// ── Reset ──────────────────────────────────────────────────────────────
+function startReset() {
+  document.getElementById('reset-confirm-box').style.display='block';
+  document.getElementById('reset-start-btn').style.display='none';
+  document.getElementById('reset-confirm-input').value='';
+  document.getElementById('reset-confirm-input').focus();
+  checkResetConfirm();
+}
+function cancelReset() {
+  document.getElementById('reset-confirm-box').style.display='none';
+  document.getElementById('reset-start-btn').style.display='';
+  document.getElementById('reset-status').style.display='none';
+}
+function checkResetConfirm() {
+  const val=document.getElementById('reset-confirm-input').value.trim().toUpperCase();
+  const btn=document.getElementById('reset-execute-btn');
+  btn.disabled=val!=='RESET'; btn.style.background=val==='RESET'?'#dc2626':'#9ca3af'; btn.style.cursor=val==='RESET'?'pointer':'not-allowed';
+}
+async function executeReset() {
+  if (document.getElementById('reset-confirm-input').value.trim().toUpperCase()!=='RESET') return;
+  const btn=document.getElementById('reset-execute-btn');
+  btn.textContent='Wiping…'; btn.disabled=true;
+  const status=document.getElementById('reset-status'); status.style.display='block';
+  try {
+    const d=await (await fetch('/api/reset',{method:'POST'})).json();
+    if (d.ok) {
+      status.style.color='#15803d'; status.style.fontWeight='600';
+      status.textContent='✓ Log wiped. All stations will reload automatically.';
+      document.getElementById('reset-confirm-box').style.display='none';
+      const sb=document.getElementById('reset-start-btn');
+      sb.style.display=''; sb.textContent='✓ Log has been reset'; sb.style.borderColor='#15803d'; sb.style.color='#15803d'; sb.disabled=true;
+    } else throw new Error(d.error||'Unknown');
+  } catch(e) {
+    status.style.color='#dc2626'; status.style.fontWeight='600'; status.textContent='✗ Reset failed: '+e.message;
+    btn.textContent='Wipe Log'; btn.disabled=false; btn.style.background='#dc2626'; btn.style.cursor='pointer';
+  }
+}
+
+// ── Network log ────────────────────────────────────────────────────────
+const NC={ok:'#22c55e',alt:'#f59e0b',cmd:'#60a5fa',err:'#ef4444',default:'#94a3b8'};
+let nws=null, nwsTimer=null;
+function addNetLog(src,text,type) {
+  const wrap=document.getElementById('netlog-wrap'); if (!wrap) return;
+  const now=new Date().toISOString().slice(11,19);
+  const d=document.createElement('div');
+  d.style.cssText='padding:2px 0;border-bottom:1px solid #1e293b;line-height:1.5';
+  d.innerHTML=`<span style="color:#475569">${now}</span> <span style="color:#64748b">[${src}]</span> <span style="color:${NC[type]||NC.default}">${text}</span>`;
+  wrap.appendChild(d); wrap.scrollTop=wrap.scrollHeight;
+  if (wrap.children.length>300) wrap.removeChild(wrap.firstChild);
+}
+function clearNetLog() { const w=document.getElementById('netlog-wrap'); if(w) w.innerHTML='<div style="color:#475569;padding:4px 0">Log cleared.</div>'; }
+function connectNetLog() {
+  try {
+    nws=new WebSocket(`ws://${location.hostname}:7373`);
+    nws.onopen=()=>{
+      clearTimeout(nwsTimer);
+      nws.send(JSON.stringify({type:'HANDSHAKE',operatorId:'SETTINGS'}));
+      const b=document.getElementById('netlog-status');
+      if(b){b.textContent='Live';b.style.background='#dcfce7';b.style.color='#15803d';b.style.borderColor='#86efac';}
+      addNetLog('SYS','Connected to Team Leader server','ok');
+    };
+    nws.onmessage=e=>{
+      try {
+        const msg=JSON.parse(e.data);
+        switch(msg.type){
+          case 'QSO_NEW':    if(msg.qso) addNetLog(msg.qso.operator||'?',`QSO: ${msg.qso.callsign} ${msg.qso.band} ${msg.qso.mode}${msg.qso.dupe_flag?' [DUPE]':''}`,msg.qso.dupe_flag?'alt':'ok'); break;
+          case 'QSO_EDIT':   if(msg.qso) addNetLog('EDIT',`Updated: ${msg.qso.callsign}`,'alt'); break;
+          case 'QSO_DELETE': addNetLog('DEL',`Deleted QSO ${msg.id?.slice(0,8)||'?'}`,'err'); break;
+          case 'OP_STATE':   if(msg.callsign) addNetLog(msg.stationId,`Op: ${msg.callsign} ${msg.txFreq||''} ${msg.mode||''}`,'cmd'); break;
+          case 'OPON_CHANGED': addNetLog(msg.stationId||'?',`OPON → ${msg.callsign}`,'cmd'); break;
+          case 'QST':        addNetLog(msg.from||'?',`QST: ${msg.text}`,'alt'); break;
+          case 'ACHIEVEMENT':addNetLog('SYS',msg.band?`🏆 100 DXCC on ${msg.band}!`:'🌟 5BDXCC ACHIEVED!','ok'); break;
+          case 'FULL_SYNC':  addNetLog('SYS',`Synced — ${(msg.qsos||[]).length} QSOs`,'ok'); break;
+          case 'STATION_LIST':if(msg.stations) addNetLog('SYS',`Stations: ${msg.stations.map(s=>s.id+(s.online?'✓':'✗')).join(' ')}`,'cmd'); break;
+          case 'SOLAR_UPDATE':if(msg.solar) addNetLog('SYS',`Solar: SFI=${msg.solar.sfi||'?'} A=${msg.solar.a||'?'} K=${msg.solar.k||'?'}`,'cmd'); break;
+        }
+      } catch {}
+    };
+    nws.onclose=()=>{
+      const b=document.getElementById('netlog-status');
+      if(b){b.textContent='Reconnecting...';b.style.background='#fef3c7';b.style.color='#92400e';b.style.borderColor='#fcd34d';}
+      nwsTimer=setTimeout(connectNetLog,5000);
+    };
+    nws.onerror=()=>nws.close();
+  } catch(e){addNetLog('SYS','WebSocket error: '+e.message,'err');}
+}
+
+// ── boot ───────────────────────────────────────────────────────────────
+loadSettings().then(updateCatCommand);
+setTimeout(connectNetLog, 500);
+</script>
+</body>
+</html>

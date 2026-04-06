@@ -1,0 +1,2928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Leader</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#f0f2f5}
+body{color:#1a1a1a;font-family:'Courier New',Courier,monospace;font-size:13px;display:flex;flex-direction:column;height:100vh}
+
+/* ── TOP BAR ── */
+#topbar{display:flex;align-items:center;background:#1e3a5f;border-bottom:2px solid #15304f;padding:0 12px;height:44px;flex-shrink:0;gap:0}
+#badge{display:flex;flex-direction:column;justify-content:center;margin-right:4px;white-space:nowrap}
+#badge-title{font-size:15px;font-weight:700;color:#ffffff;letter-spacing:2px;line-height:1.2}
+#badge-title span{color:#fbbf24;font-size:11px;letter-spacing:1px;margin-left:6px;font-weight:400}
+#badge-tagline{font-size:8px;color:#4a7aaa;letter-spacing:1px;line-height:1.2;text-transform:uppercase}
+.tsep{width:1px;height:22px;background:#2d5a8e;margin:0 8px;flex-shrink:0}
+.tstat{display:flex;flex-direction:column;align-items:center;padding:0 12px;border-right:1px solid #2d5a8e;line-height:1.2;cursor:default;user-select:none}
+.tstat:last-of-type{border-right:none}
+.tval{font-size:18px;font-weight:700;color:#ffffff;letter-spacing:1px}
+.tval.amber{color:#fbbf24}
+.tval.red{color:#fca5a5}
+.tval.cyan{color:#7dd3fc}
+.tval.solar-good{color:#4ade80}
+.tval.solar-fair{color:#fbbf24}
+.tval.solar-poor{color:#f87171}
+.tlbl{font-size:9px;color:#93b4d4;text-transform:uppercase;letter-spacing:1px}
+#settings-link{margin-left:auto;font-size:11px;font-weight:600;color:#fbbf24;text-decoration:none;border:1px solid #4a6a9a;border-radius:4px;padding:3px 10px;background:#2d5a8e;letter-spacing:.5px;white-space:nowrap;flex-shrink:0}
+#settings-link:hover{background:#3d6aa0;border-color:#7aabda}
+#clkwrap{margin-left:8px;display:flex;flex-direction:column;align-items:flex-end;gap:0}
+#ntpwrap{display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none}
+#ntpdot{width:8px;height:8px;border-radius:50%;background:#3a6a9b;flex-shrink:0;transition:background .4s}
+#ntpdot.ok{background:#22c55e}
+#ntpdot.warn{background:#f59e0b;animation:ntppulse 2s ease-in-out infinite}
+#ntpdot.bad{background:#ef4444;animation:ntppulse .8s ease-in-out infinite}
+#ntpdot.checking{background:#3a6a9b;animation:ntppulse 1s ease-in-out infinite}
+#ntplbl{font-size:9px;color:#7090b0;letter-spacing:.5px;transition:color .4s}
+#ntplbl.ok{color:#22c55e}
+#ntplbl.warn{color:#f59e0b}
+#ntplbl.bad{color:#ef4444}
+@keyframes ntppulse{0%,100%{opacity:1}50%{opacity:.4}}
+#clock{font-size:16px;font-weight:700;color:#ffffff;letter-spacing:2px;line-height:1.2}
+#localclock{font-size:10px;color:#7090b0;letter-spacing:1px;line-height:1.2}
+.clbl{font-size:9px;color:#93b4d4}
+
+/* ── MAIN ── */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* ── LEFT PANEL ── */
+#left{width:420px;flex-shrink:0;display:flex;flex-direction:column;border-right:2px solid #d1d5db}
+
+/* ── ENTRY AREA ── */
+#entry{background:#ffffff;padding:10px 12px;border-bottom:2px solid #d1d5db;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.erow{display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.erow:last-child{margin-bottom:0}
+.elbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6b7280;width:30px;flex-shrink:0}
+
+input[type=text]{
+  background:#f9fafb;border:1px solid #d1d5db;border-radius:4px;
+  color:#111827;font-family:'Courier New',monospace;font-size:13px;
+  padding:4px 8px;outline:none;transition:border-color .15s,box-shadow .15s;
+}
+input[type=text]:focus{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.15);background:#fff}
+input[type=text]::placeholder{color:#9ca3af}
+
+#callIn{font-size:23px;font-weight:700;letter-spacing:3px;width:166px;text-transform:uppercase;color:#111827;background:#f0f7ff;border-color:#93c5fd}
+#callIn:focus{border-color:#2563eb;background:#ffffff}
+
+.mbts{display:flex;gap:3px;margin-left:auto}
+.mb{background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;color:#6b7280;font-family:'Courier New',monospace;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;letter-spacing:1px;transition:all .1s}
+.mb:hover{background:#e5e7eb;border-color:#9ca3af;color:#374151}
+.mb.ssb{background:#dcfce7;border-color:#16a34a;color:#15803d}
+.mb.cw{background:#fef9c3;border-color:#ca8a04;color:#92400e}
+.mb.ft8{background:#dbeafe;border-color:#2563eb;color:#1d4ed8}
+
+#freqrow{display:flex;align-items:center;gap:8px;margin-top:7px;padding-top:7px;border-top:1px solid #e5e7eb}
+#freqdsp{font-size:21px;font-weight:700;color:#b45309;letter-spacing:1px}
+#banddsp{font-size:12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:2px 8px;color:#92400e;font-weight:700}
+.catst{display:flex;align-items:center;gap:5px;font-size:10px;color:#6b7280;margin-left:auto}
+.catdot{width:7px;height:7px;border-radius:50%;background:#d1d5db}
+/* Electron native drag region — allows dragging window by topbar */
+#topbar { -webkit-app-region: drag; }
+#topbar input, #topbar button, #topbar a,
+#topbar #clkwrap, #topbar #ntpwrap,
+#topbar .sbi, #topbar #sb-cat { -webkit-app-region: no-drag; }
+.catdot.on{background:#16a34a}
+.catdot.off{background:#dc2626}
+
+/* ── OPERATOR ROW ── */
+#oprow{display:flex;align-items:center;gap:8px;margin-top:7px;padding-top:7px;border-top:1px solid #e5e7eb}
+#opbadge{font-size:12px;font-weight:700;color:#ffffff;background:#1e3a5f;border-radius:4px;padding:3px 10px;letter-spacing:1px;cursor:pointer}
+#opbadge:hover{background:#2d5a8e}
+#opstation{font-size:11px;color:#6b7280}
+#oponbtn{margin-left:auto;font-size:10px;color:#374151;cursor:pointer;border:1px solid #d1d5db;border-radius:4px;padding:3px 10px;background:#f3f4f6;font-family:'Courier New',monospace;letter-spacing:1px;transition:all .1s}
+#oponbtn:hover{background:#e5e7eb;border-color:#9ca3af}
+
+/* ── BANNERS ── */
+#dupebanner,#newbanner,#cmdbanner{display:none;border-radius:4px;font-size:12px;font-weight:700;padding:6px 12px;letter-spacing:1px;text-align:center;margin-top:6px}
+#dxinfo{display:flex;align-items:center;gap:6px;margin-bottom:3px;min-height:18px}
+#dxinfo-country{font-weight:700;color:#1e3a5f;font-size:12px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+#dxinfo-cont{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;padding:1px 7px;border-radius:8px;border:1px solid;white-space:nowrap;flex-shrink:0}
+#dxinfo-cont.NA{background:#dbeafe;color:#1e40af;border-color:#93c5fd}
+#dxinfo-cont.SA{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+#dxinfo-cont.EU{background:#dcfce7;color:#14532d;border-color:#86efac}
+#dxinfo-cont.AF{background:#fce7f3;color:#831843;border-color:#f9a8d4}
+#dxinfo-cont.AS{background:#ede9fe;color:#4c1d95;border-color:#c4b5fd}
+#dxinfo-cont.OC{background:#ffedd5;color:#9a3412;border-color:#fdba74}
+#dxinfo-cont.AN{background:#f1f5f9;color:#334155;border-color:#cbd5e1}
+#dxinfo-cont.??{background:#f3f4f6;color:#6b7280;border-color:#d1d5db}
+#dupebanner{background:#fee2e2;border:2px solid #dc2626;color:#991b1b;animation:blk .5s ease-in-out infinite alternate}
+#newbanner{background:#dcfce7;border:2px solid #16a34a;color:#14532d}
+#cmdbanner{background:#dbeafe;border:1px solid #3b82f6;color:#1e40af}
+#dupebanner.show,#newbanner.show,#cmdbanner.show{display:block}
+@keyframes blk{from{opacity:1}to{opacity:.4}}
+
+/* ── BUTTONS ── */
+#btns{display:flex;gap:5px;margin-top:8px}
+#logbtn{background:#16a34a;border:2px solid #15803d;border-radius:4px;color:#ffffff;font-family:'Courier New',monospace;font-size:13px;font-weight:700;padding:9px 0;cursor:pointer;letter-spacing:2px;flex:1;transition:all .1s}
+#logbtn:hover{background:#15803d;border-color:#14532d}
+#logbtn:active{transform:scale(.98)}
+#wipebtn{background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;color:#374151;font-family:'Courier New',monospace;font-size:11px;padding:9px 14px;cursor:pointer;transition:all .1s}
+.cw-macro-btn{padding:3px 10px;background:#1e3a5f;color:#e0e7ef;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;font-family:'Courier New',monospace;transition:background .1s}
+.cw-macro-btn:hover{background:#2d5a8e}
+.cw-macro-btn.stop{background:#7f1d1d;color:#fecaca}
+.cw-macro-btn.stop:hover{background:#991b1b}
+#wipebtn:hover{background:#e5e7eb;border-color:#9ca3af}
+#exportbtn{background:#eff6ff;border:1px solid #93c5fd;border-radius:4px;color:#1d4ed8;font-family:'Courier New',monospace;font-size:11px;padding:9px 10px;cursor:pointer;transition:all .1s}
+#exportbtn:hover{background:#dbeafe;border-color:#3b82f6}
+
+/* ── RATE BAR ── */
+#statbars{flex-shrink:0;border-bottom:2px solid #d1d5db}
+.statrow{display:flex;align-items:stretch;border-bottom:1px solid #e5e7eb;background:#f9fafb}
+.statrow:last-child{border-bottom:none}
+#statrow-local{background:#fffbeb}
+.stat-label{font-size:9px;font-weight:700;letter-spacing:2px;color:#9ca3af;writing-mode:vertical-lr;text-orientation:mixed;padding:4px 5px;border-right:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;min-width:20px;flex-shrink:0}
+#statrow-local .stat-label{color:#b45309}
+.ri{flex:1;text-align:center;padding:4px 3px;border-right:1px solid #e5e7eb}
+.ri:last-child{border-right:none}
+.rbig{font-size:18px;font-weight:700;color:#374151}
+.rbig.amber{color:#b45309}
+.rsm{font-size:8px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-top:1px}
+
+/* ── LOG TABLE ── */
+#loghdr{display:grid;grid-template-columns:28px 88px 50px 38px 38px 50px 48px 1fr;padding:3px 8px;border-bottom:1px solid #d1d5db;background:#f9fafb;flex-shrink:0}
+#loghdr span{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af}
+#qsolog{flex:1;overflow-y:auto;background:#ffffff}
+#qsolog::-webkit-scrollbar{width:4px}
+#qsolog::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
+
+.lr{display:grid;grid-template-columns:28px 88px 50px 38px 38px 50px 48px 1fr;padding:3px 8px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background .07s}
+.lr:hover{background:#f0f7ff}
+.lr span{font-size:12px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lr .lc{color:#111827;font-weight:700}
+.lr .lop{color:#b45309}
+.lr.cw .lc{color:#92400e}
+.lr.ft .lc{color:#1d4ed8}
+.lr.dp{opacity:.4}
+
+/* ── RIGHT PANEL ── */
+#right{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:#f0f2f5}
+
+/* ── NETWORK BAR ── */
+#netbar{display:flex;align-items:center;background:#1e3a5f;padding:0 10px;height:30px;gap:3px;flex-shrink:0;overflow:hidden}
+.netlbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#93b4d4;margin-right:6px;flex-shrink:0}
+.nn{display:flex;align-items:center;gap:4px;font-size:11px;padding:0 8px;border-right:1px solid #2d5a8e;white-space:nowrap}
+.nn:last-child{border-right:none}
+.ndot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ndot.up{background:#4ade80}
+.ndot.dw{background:#f87171}
+.ndot.wn{background:#fbbf24}
+.nname{color:#93b4d4}
+.nname.me{color:#ffffff;font-weight:700}
+.nname.master-node{color:#fbbf24;font-weight:700}
+.nname.peer-node{color:#7dd3fc}
+
+/* ── RIGHT BODY ── */
+#rbody{flex:1;display:flex;overflow:hidden}
+#scppanel{width:200px;flex-shrink:0;border-right:2px solid #d1d5db;display:flex;flex-direction:column;background:#ffffff;overflow:hidden}
+#scppanel .ptitle{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;padding:5px 9px;border-bottom:1px solid #e5e7eb;background:#f9fafb;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+#rightcol{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── BAND PANEL ── */
+#bandpanel{flex:1;min-height:0;border-top:2px solid #d1d5db;display:flex;flex-direction:column;background:#ffffff;overflow-y:auto}
+.ptitle{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;padding:5px 9px;border-bottom:1px solid #e5e7eb;background:#f9fafb;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.ptitle-btn{font-size:9px;color:#6b7280;cursor:pointer;border:1px solid #d1d5db;border-radius:3px;padding:1px 7px;background:#ffffff;font-family:'Courier New',monospace;letter-spacing:1px}
+.ptitle-btn:hover{background:#f3f4f6;border-color:#9ca3af;color:#374151}
+
+.brow{display:flex;flex-direction:column;padding:4px 9px 3px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background .07s}
+.brow:hover{background:#f0f7ff}
+.brow.bact{background:#eff6ff;border-left:3px solid #2563eb}
+.brow-top{display:flex;align-items:center;width:100%}
+.bname{font-size:12px;color:#111827;font-weight:700;width:36px}
+.bbarw{flex:1;height:3px;background:#e5e7eb;border-radius:2px;margin:0 7px}
+.bbar{height:3px;background:#d1d5db;border-radius:2px;transition:width .3s}
+.bbar.has{background:#f59e0b}
+.bcnt{font-size:11px;color:#6b7280;min-width:20px;text-align:right}
+.brow-modes{display:flex;gap:6px;margin-top:2px;padding-left:36px}
+.bmode-pill{font-size:9px;padding:0 5px;border-radius:3px;line-height:1.6;font-weight:600}
+.bmode-pill.ssb{background:#dbeafe;color:#1d4ed8}
+.bmode-pill.cw{background:#fef3c7;color:#92400e}
+.bmode-pill.ft8{background:#d1fae5;color:#065f46}
+
+/* ── SUPERCHECK PARTIAL ── */
+#supercheck{background:#ffffff;flex:1;overflow-y:auto;display:none}
+#supercheck.active{display:block;flex:1}
+.sc-title{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;padding:4px 9px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+.sc-title span.sc-match-count{color:#6b7280}
+.sc-row{display:flex;align-items:center;gap:8px;padding:2px 9px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background .06s}
+.sc-row:hover{background:#f0f7ff}
+.sc-call{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:#111827;flex:1}
+.sc-hi{color:#2563eb}
+.sc-worked{color:#dc2626;font-size:9px;font-weight:700;letter-spacing:.5px;background:#fee2e2;border-radius:3px;padding:1px 5px;flex-shrink:0}
+.sc-prev{color:#b45309;font-size:9px;font-weight:700;letter-spacing:.5px;background:#fef3c7;border-radius:3px;padding:1px 5px;flex-shrink:0}
+
+/* ── OPERATOR STATUS PANEL ── */
+#oppanel{flex:0 0 auto;max-height:45%;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:#ffffff;border-bottom:1px solid #d1d5db}
+#oplist-hdr{display:grid;grid-template-columns:120px 88px 88px 54px 1fr;padding:4px 10px;border-bottom:1px solid #e5e7eb;background:#f9fafb;flex-shrink:0}
+#oplist-hdr span{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af}
+#oprows{flex:1;overflow-y:auto}
+#oprows::-webkit-scrollbar{width:4px}
+#oprows::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
+
+.oprow-item{display:grid;grid-template-columns:120px 88px 88px 54px 1fr;padding:6px 10px;border-bottom:1px solid #f3f4f6;transition:background .07s;align-items:center}
+.oprow-item:hover{background:#f9fafb}
+.oprow-item.me-row{background:#fffbeb;border-left:3px solid #f59e0b}
+.oprow-item.offline{opacity:.4}
+
+.op-call-cell{display:flex;flex-direction:column;gap:1px;min-width:0}
+.op-call{font-size:13px;font-weight:700;color:#111827;line-height:1.3}
+.op-call.me-call{color:#b45309}
+.op-station-lbl{font-size:10px;color:#9ca3af;font-weight:400;line-height:1}
+.op-freq{font-size:12px;font-family:'Courier New',monospace;color:#b45309;line-height:1.2}
+.op-rxfreq{font-size:12px;font-family:'Courier New',monospace;color:#1d4ed8;line-height:1.2}
+.op-rxfreq.split{color:#ea580c}
+.op-rxfreq.simplex{color:#9ca3af}
+.op-mode-badge{font-size:10px;font-weight:700;letter-spacing:1px;border-radius:3px;padding:2px 7px;display:inline-block;line-height:1.4}
+.op-mode-badge.SSB{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.op-mode-badge.CW{background:#fef9c3;color:#92400e;border:1px solid #fde047}
+.op-mode-badge.FT8{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.op-rate-cell{display:flex;align-items:center;gap:8px}
+.op-rate{font-size:16px;font-weight:700;color:#374151;font-family:'Courier New',monospace}
+.op-rate.hot{color:#16a34a}
+.op-rate.warm{color:#b45309}
+.op-rate.cold{color:#d1d5db}
+.op-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.op-dot.online{background:#16a34a}
+.op-dot.offline{background:#d1d5db}
+.op-dot.warn{background:#f59e0b}
+.op-no-data{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#d1d5db;font-size:11px;text-transform:uppercase;letter-spacing:2px}
+
+/* ── MESSAGE AREA ── */
+#msgarea{height:110px;border-top:2px solid #d1d5db;display:flex;flex-direction:column;flex-shrink:0}
+.msgt{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;padding:4px 9px;border-bottom:1px solid #e5e7eb;background:#f9fafb;flex-shrink:0}
+#msglog{display:none}
+#qstlog{flex:1;overflow-y:auto;padding:4px 8px;background:#f0f7ff}
+#qstlog::-webkit-scrollbar{width:3px}
+#qstlog::-webkit-scrollbar-thumb{background:#bfdbfe}
+.qst-msg{padding:4px 0;border-bottom:1px solid #dbeafe;font-size:11px;line-height:1.4}
+.qst-msg.qst-mine{background:#eff6ff}
+.qst-time{color:#9ca3af;margin-right:5px;font-size:10px}
+.qst-from{font-weight:700;color:#1d4ed8;margin-right:5px}
+.qst-text{color:#1e3a5f}
+.qst-hdr-flash{background:#dbeafe !important}
+#qst-hdr.qst-new{background:#dbeafe;transition:background .3s}
+.ml{font-size:11px;line-height:1.65;color:#9ca3af}
+.ml .ms{color:#d1d5db;margin-right:5px}
+.ml.ok{color:#16a34a}
+.ml.alt{color:#b45309}
+.ml.er{color:#dc2626}
+.ml.cmd{color:#2563eb}
+
+/* ── STATUS BAR ── */
+#statusbar{height:22px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;align-items:center;padding:0 10px;gap:14px;flex-shrink:0}
+.sbi{font-size:10px;color:#9ca3af}
+.sbi span{color:#374151;margin-left:3px}
+.sbi.warn span{color:#b45309}
+.sbi.err span{color:#dc2626}
+.sbhint{font-size:10px;color:#d1d5db;margin-left:auto}
+
+/* ── ACHIEVEMENT / ENCOURAGEMENT BANNER ── */
+#achievement-banner{
+  display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);
+  z-index:9000;min-width:400px;max-width:700px;
+  background:linear-gradient(135deg,#1a3a6a 0%,#1e3a5f 100%);
+  border:2px solid #fbbf24;border-top:none;border-radius:0 0 12px 12px;
+  padding:12px 24px;text-align:center;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+}
+#achievement-banner.show{display:block;animation:slideDown .4s cubic-bezier(0.34,1.56,0.64,1)}
+#achievement-banner.encourage{border-color:#22c55e;background:linear-gradient(135deg,#0f2a1a 0%,#0d2210 100%)}
+@keyframes slideDown{from{transform:translateX(-50%) translateY(-100%)}to{transform:translateX(-50%) translateY(0)}}
+#achievement-banner .ach-icon{font-size:22px;margin-bottom:4px}
+#achievement-banner .ach-title{font-size:15px;font-weight:800;color:#fbbf24;letter-spacing:2px;text-transform:uppercase}
+#achievement-banner.encourage .ach-title{color:#22c55e}
+#achievement-banner .ach-sub{font-size:12px;color:#93c5fd;margin-top:3px;letter-spacing:.5px}
+#achievement-banner.encourage .ach-sub{color:#86efac}
+#achievement-banner .ach-dismiss{font-size:10px;color:#6b7280;cursor:pointer;margin-top:6px;display:block}
+#achievement-banner .ach-dismiss:hover{color:#d1d5db}
+
+/* ── 5BDXCC FULL-SCREEN CELEBRATION ── */
+#fiveband-overlay{
+  display:none;position:fixed;inset:0;z-index:9500;
+  background:rgba(0,0,0,.85);
+  align-items:center;justify-content:center;
+  animation:fbFadeIn .5s ease;
+}
+#fiveband-overlay.show{display:flex}
+@keyframes fbFadeIn{from{opacity:0}to{opacity:1}}
+#fiveband-box{
+  background:#0d1f38;border:3px solid #fbbf24;border-radius:16px;
+  padding:40px 56px;text-align:center;max-width:560px;width:90%;
+  animation:fbPop .5s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 0 80px rgba(251,191,36,.25);
+}
+@keyframes fbPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+#fiveband-box .fb-stars{font-size:32px;letter-spacing:8px;margin-bottom:12px}
+#fiveband-box .fb-title{font-size:28px;font-weight:900;color:#fbbf24;letter-spacing:4px;text-transform:uppercase;line-height:1.1;margin-bottom:8px}
+#fiveband-box .fb-award{font-size:13px;color:#60a5fa;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;font-weight:600}
+#fiveband-box .fb-bands{display:flex;justify-content:center;gap:10px;margin-bottom:20px}
+#fiveband-box .fb-band{background:#1e3a5f;border:1px solid #fbbf24;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:700;color:#fbbf24;font-family:'Courier New',monospace}
+#fiveband-box .fb-sub{font-size:13px;color:#94a3b8;line-height:1.6;margin-bottom:24px}
+#fiveband-box .fb-dismiss{background:#fbbf24;color:#0d1f38;border:none;border-radius:6px;padding:10px 32px;font-size:13px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer}
+#fiveband-box .fb-dismiss:hover{background:#f59e0b}
+
+/* ── QST MESSAGE MODAL ── */
+#qstoverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:flex-start;justify-content:center;padding-top:120px}
+#qstoverlay.show{display:flex}
+#qstbox{background:#ffffff;border:2px solid #2563eb;border-radius:8px;padding:18px 20px;width:420px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+#qstbox label{display:block;font-size:10px;font-weight:700;color:#2563eb;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+#qstInput{width:100%;font-family:'Courier New',monospace;font-size:15px;padding:8px 10px;border:2px solid #d1d5db;border-radius:6px;outline:none;color:#111827;background:#f0f7ff}
+#qstInput:focus{border-color:#2563eb;background:#ffffff}
+#qsthint{font-size:11px;color:#9ca3af;margin-top:8px;text-align:center}
+
+/* ── OPON MODAL ── */
+#oponoverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:flex-start;justify-content:center;padding-top:120px}
+#oponoverlay.show{display:flex}
+#oponbox{background:#ffffff;border:2px solid #1e3a5f;border-radius:8px;padding:18px 20px;width:280px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+#oponbox label{display:block;font-size:10px;font-weight:700;color:#1e3a5f;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+#oponCallIn{width:100%;font-family:'Courier New',monospace;font-size:22px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:8px 10px;border:2px solid #d1d5db;border-radius:6px;outline:none;color:#111827;text-align:center;background:#f0f7ff}
+#oponCallIn:focus{border-color:#1e3a5f;background:#ffffff}
+#oponhint{font-size:11px;color:#9ca3af;margin-top:8px;text-align:center}
+
+/* ── EDIT MODAL ── */
+#editoverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center}
+#editoverlay.show{display:flex}
+#editbox{background:#ffffff;border:2px solid #d1d5db;border-radius:8px;padding:18px;width:370px;box-shadow:0 10px 25px rgba(0,0,0,.2)}
+#editbox h3{font-size:13px;color:#111827;margin-bottom:14px;font-weight:700;letter-spacing:1px}
+.ef{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}
+.ef label{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:1px}
+.ef input{background:#f9fafb;border:1px solid #d1d5db;border-radius:4px;color:#111827;font-family:'Courier New',monospace;font-size:13px;padding:5px 8px;outline:none;width:100%}
+.ef input:focus{border-color:#2563eb}
+.ebtns{display:flex;gap:6px;margin-top:6px}
+.esave{background:#16a34a;border:1px solid #15803d;border-radius:4px;color:#ffffff;font-family:'Courier New',monospace;font-size:12px;padding:7px 0;cursor:pointer;flex:1}
+.ecancel{background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;color:#374151;font-family:'Courier New',monospace;font-size:12px;padding:7px 12px;cursor:pointer}
+.edelete{background:#fee2e2;border:1px solid #f87171;border-radius:4px;color:#991b1b;font-family:'Courier New',monospace;font-size:12px;padding:7px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div id="badge"><div id="badge-title">TEAM LEADER <span id="top-call">NOCALL</span><span id="top-ver" style="font-size:9px;color:#4a6a9a;margin-left:8px;letter-spacing:0">v?</span></div><div id="badge-tagline">Built for DXpeditioners by DXpeditioners</div></div>
+  <div class="tsep"></div>
+  <div class="tstat"><div class="tval" id="tv-q">0</div><div class="tlbl">QSOs</div></div>
+  <div class="tstat"><div class="tval" id="tv-m">0</div><div class="tlbl">Mults</div></div>
+  <div class="tstat"><div class="tval amber" id="tv-r">0</div><div class="tlbl">/hr</div></div>
+  <div class="tstat"><div class="tval red" id="tv-d">0</div><div class="tlbl">Dupes</div></div>
+  <div class="tstat"><div class="tval cyan" id="tv-p">0</div><div class="tlbl">Queue</div></div>
+  <div class="tstat"><div class="tval" id="tv-cl" style="font-size:10px">--</div><div class="tlbl">Clublog</div></div>
+  <div class="tstat" title="Click to refresh solar data" style="border-left:1px solid #2d5a8e;cursor:pointer" onclick="refreshSolar()">
+    <div class="tval" id="tv-sfi" style="font-size:14px">--</div>
+    <div class="tlbl">SFI</div>
+  </div>
+  <div class="tstat" title="A-Index — geomagnetic activity (lower=better). Click to refresh" style="cursor:pointer" onclick="refreshSolar()">
+    <div class="tval" id="tv-a" style="font-size:14px">--</div>
+    <div class="tlbl">A</div>
+  </div>
+  <div class="tstat" title="K-Index — geomagnetic activity (lower=better). Click to refresh" style="cursor:pointer" onclick="refreshSolar()">
+    <div class="tval" id="tv-k" style="font-size:14px">--</div>
+    <div class="tlbl">K</div>
+  </div>
+  <a href="/settings.html" target="_blank" id="settings-link">&#9881; Settings</a>
+  <div id="clkwrap">
+    <div style="display:flex;align-items:center;gap:5px"><div class="clbl">UTC</div><div id="clock">--:--:--</div></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+      <div id="localclock">LOCAL --:--</div>
+      <div id="ntpwrap" title="NTP sync status — click to recheck" onclick="checkNTP()">
+        <div id="ntpdot" class="checking"></div>
+        <span id="ntplbl">NTP</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="left">
+    <div id="entry">
+      <div id="dxinfo"><span id="dxinfo-country"></span><span id="dxinfo-cont" class="??"></span></div>
+      <div class="erow">
+        <div class="elbl">Call</div>
+        <input type="text" id="callIn" placeholder="W1AW" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" autofocus/>
+        <div class="mbts">
+          <button class="mb ssb" id="mb-SSB" onclick="setMode('SSB',true)">SSB</button>
+          <button class="mb"     id="mb-CW"  onclick="setMode('CW',true)">CW</button>
+          <button class="mb"     id="mb-FT8" onclick="setMode('FT8',true)">FT8</button>
+        </div>
+      </div>
+      <!-- RST/NR/XCH removed for DXpedition mode — hidden defaults used -->
+      <input type="hidden" id="rstS" value="59"/>
+      <input type="hidden" id="rstR" value="59"/>
+      <div id="cw-macro-bar" style="display:none;align-items:center;gap:6px;padding:4px 0;flex-wrap:wrap"></div>
+      <div id="esm-indicator" style="display:none;font-size:11px;font-weight:700;color:#f59e0b;letter-spacing:1px;padding:2px 0"></div>
+      <input type="hidden" id="nrIn" value=""/>
+      <input type="hidden" id="xchIn" value=""/>
+      <div id="freqrow">
+        <div id="freqdsp">---.---.--</div>
+        <div id="banddsp">---</div>
+        <div class="catst">
+          <div class="catdot" id="catdot"></div>
+          <span id="catrig">no rig</span>
+        </div>
+      </div>
+      <div id="oprow">
+        <div id="opbadge" onclick="openOPON()">--</div>
+        <div id="opstation">-- / --</div>
+        <button id="oponbtn" onclick="openOPON()">OPON</button>
+      </div>
+      <div id="dupebanner">&#9888;&nbsp; DUPE — Already worked this band/mode</div>
+      <div id="newbanner">&#9733;&nbsp; NEW MULTIPLIER!</div>
+      <div id="cmdbanner">--</div>
+      <div id="btns">
+        <button id="logbtn"    onclick="doLog()">LOG &nbsp;[ENTER]</button>
+        <button id="wipebtn"   onclick="doWipe()">WIPE</button>
+        <button id="exportbtn" onclick="doExport()">ADIF</button>
+      </div>
+    </div>
+
+    <div id="statbars">
+      <div class="statrow" id="statrow-team">
+        <div class="stat-label">TEAM</div>
+        <div class="ri"><div class="rbig" id="t-q">0</div><div class="rsm">QSOs</div></div>
+        <div class="ri"><div class="rbig" id="t-10">0</div><div class="rsm">Last 10m</div></div>
+        <div class="ri"><div class="rbig" id="t-60">0</div><div class="rsm">Last 60m</div></div>
+        <div class="ri"><div class="rbig" id="t-best">0</div><div class="rsm">Best hr</div></div>
+      </div>
+      <div class="statrow" id="statrow-local">
+        <div class="stat-label">ME</div>
+        <div class="ri"><div class="rbig amber" id="l-q">0</div><div class="rsm">QSOs</div></div>
+        <div class="ri"><div class="rbig amber" id="l-10">0</div><div class="rsm">Last 10m</div></div>
+        <div class="ri"><div class="rbig amber" id="l-60">0</div><div class="rsm">Last 60m</div></div>
+        <div class="ri"><div class="rbig amber" id="l-best">0</div><div class="rsm">Best hr</div></div>
+      </div>
+    </div>
+
+    <div id="loghdr">
+      <span>#</span><span>Callsign</span><span>Time</span>
+      <span>SRS</span><span>RRS</span><span>Band</span><span>Mode</span><span>Op</span>
+    </div>
+    <div id="qsolog"></div>
+  </div>
+
+  <div id="right">
+    <div id="netbar">
+      <div class="netlbl">Network</div>
+      <div id="stationlist"></div>
+    </div>
+
+    <div id="rbody">
+      <div id="scppanel">
+        <div class="ptitle"><span>Super Check Partial</span><span id="scp-count" style="font-size:9px;color:#9ca3af"></span></div>
+        <div id="supercheck"></div>
+      </div>
+
+      <div id="rightcol">
+        <div id="oppanel">
+          <div class="ptitle"><span>Operator status</span></div>
+          <div id="oplist-hdr">
+            <span>Operator</span>
+            <span>TX Freq</span>
+            <span>RX Freq</span>
+            <span>Mode</span>
+            <span>Rate/hr</span>
+          </div>
+          <div id="oprows">
+            <div class="op-no-data">No operators connected</div>
+          </div>
+        </div>
+        <div id="bandpanel">
+          <div class="ptitle"><span>Band summary</span></div>
+          <div id="bandsumm"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="msgarea">
+      <div style="display:flex;flex-direction:column;height:100%">
+        <div class="msgt" id="qst-hdr" style="display:flex;align-items:center;justify-content:space-between">
+          <span>&#128172; Operator messages</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:9px;color:#9ca3af;cursor:pointer" onclick="openQST()" title="Type QST in call box to send">QST</span>
+            <a href="/settings.html" target="_blank" style="font-size:9px;color:#9ca3af;text-decoration:none" title="Network log is on the Settings page">&#9881; Net log</a>
+          </div>
+        </div>
+        <div id="qstlog"></div>
+      </div>
+      <div id="msglog"></div>
+    </div>
+  </div>
+</div>
+
+<div id="statusbar">
+  <div class="sbi">Log:<span id="sb-log">---</span></div>
+  <div class="sbi warn">Queue:<span id="sb-q">0</span></div>
+  <div class="sbi" id="sb-ws-wrap">WS:<span id="sb-ws">connecting...</span></div>
+  <div class="sbi">CAT:<span id="sb-cat">disabled</span></div>
+  <div class="sbi" id="sb-usb" onclick="forceUSBBackup()" style="cursor:pointer" title="Click to force backup now">USB:<span style="color:#9ca3af">checking...</span></div>
+  <div class="sbi">Local mirror:<span id="sb-local">0 QSOs</span></div>
+  <div class="sbi" id="sb-scp">SCP: loading...</div>
+  <div class="sbhint" style="margin-left:auto">Commands: SSB CW FT8 OPON QST STATS &nbsp;|&nbsp; ENTER=Log &nbsp; ESC=Wipe &nbsp; Click=Edit</div>
+
+</div>
+
+<!-- Achievement / Encouragement Banner -->
+<div id="achievement-banner">
+  <div class="ach-icon" id="ach-icon">&#127942;</div>
+  <div class="ach-title" id="ach-title">100 DXCC on 20M!</div>
+  <div class="ach-sub" id="ach-sub">100 unique DXCC entities worked on 20 Metres</div>
+  <span class="ach-dismiss" onclick="dismissBanner()">click to dismiss &nbsp;&times;</span>
+</div>
+
+<!-- 5BDXCC Full-Screen Celebration -->
+<div id="fiveband-overlay">
+  <div id="fiveband-box">
+    <div class="fb-stars">&#11088;&#11088;&#11088;&#11088;&#11088;</div>
+    <div class="fb-title">5-Band DXCC</div>
+    <div class="fb-award">Achievement Unlocked</div>
+    <div class="fb-bands">
+      <div class="fb-band">80M</div>
+      <div class="fb-band">40M</div>
+      <div class="fb-band">20M</div>
+      <div class="fb-band">15M</div>
+      <div class="fb-band">10M</div>
+    </div>
+    <div class="fb-sub">100 unique DXCC entities worked on all five classic bands.<br>This is an outstanding DXpedition achievement — congratulations to the whole team!</div>
+    <button class="fb-dismiss" onclick="dismiss5BDXCC()">Congratulations! &#127881;</button>
+  </div>
+</div>
+
+<!-- QST Message Modal -->
+<div id="qstoverlay">
+  <div id="qstbox">
+    <label>Message to all operators</label>
+    <input type="text" id="qstInput" placeholder="Type message..." autocomplete="off" spellcheck="false" maxlength="200"/>
+    <div id="qsthint">ENTER to send &nbsp;&middot;&nbsp; ESC to cancel</div>
+  </div>
+</div>
+
+<!-- OPON Modal -->
+<div id="oponoverlay">
+  <div id="oponbox">
+    <label>Operator callsign</label>
+    <input type="text" id="oponCallIn" placeholder="W1AW" autocomplete="off" spellcheck="false" autocapitalize="characters"/>
+    <div id="oponhint">ENTER to confirm &nbsp;&middot;&nbsp; ESC to cancel</div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editoverlay">
+  <div id="editbox">
+    <h3>Edit QSO &mdash; <span id="eNr"></span></h3>
+    <div class="ef"><label>Callsign</label><input id="eCall" type="text"/></div>
+    <div style="display:flex;gap:8px">
+      <div class="ef" style="flex:1"><label>RST Sent</label><input id="eRstS" type="text"/></div>
+      <div class="ef" style="flex:1"><label>RST Rcvd</label><input id="eRstR" type="text"/></div>
+      <div class="ef" style="flex:1"><label>Exchange</label><input id="eXch" type="text"/></div>
+    </div>
+    <div class="ef"><label>Name (optional)</label><input id="eName" type="text"/></div>
+    <div class="ebtns">
+      <button class="esave"   onclick="saveEdit()">Save changes</button>
+      <button class="ecancel" onclick="closeEdit()">Cancel</button>
+      <button class="edelete" onclick="deleteEdit()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let cfg        = {};
+let qsos       = [];
+let mode       = 'SSB';
+let currentFreq = '14.225.0';
+
+// ── ESM / CW state ──────────────────────────────────────────────────────────
+// ESM states: IDLE → CALLING → LOGGED (tu sent) → IDLE
+let esmState   = 'IDLE';   // 'IDLE' | 'CALLING' | 'TU'
+let esmCall    = '';        // call being worked
+let cwRigOnline    = false;  // true when CAT rig is connected
+let cwConfigEnabled = false; // true when CW ESM enabled in settings
+let cwConfig   = {
+  speed:       25,          // WPM
+  callMacro:   '{CALL} 5NN',  // sent on first Enter
+  tuMacro:     'TU',          // sent after logging
+  cqMacro:     'CQ CQ {MYCALL} {MYCALL}',  // sent when Enter pressed with empty call
+  extraMacros: [],            // [{label, text}]
+};
+let currentBand = '20M';
+let bestHr     = 0;
+let myBestHr   = 0;
+let recentTimes = [];
+
+// ── Persistent state helpers ───────────────────────────────────────────────
+// All state is keyed by stationId (OP1/OP2 etc.) so each station machine
+// restores its own state independently.
+function saveState(key, value) {
+  try { localStorage.setItem('tl_' + key + '_' + (stationId || 'OP1'), JSON.stringify(value)); } catch {}
+}
+function loadState(key, fallback) {
+  try {
+    const v = localStorage.getItem('tl_' + key + '_' + (stationId || 'OP1'));
+    return v !== null ? JSON.parse(v) : fallback;
+  } catch { return fallback; }
+}
+let editQsoId  = null;
+let pendingQueue = [];
+let ws         = null;
+let wsReconnectTimer = null;
+let spotsVisible  = true;
+let operators     = [];
+let currentOp     = '';
+let stationId     = '';
+let sessionId     = '';     // unique per browser tab — prevents same-machine tab conflicts
+let masterId      = '';     // operatorId of the master node (from config)
+let isThisMaster  = false;  // true if this tab is on the master machine
+let currentRxFreq = null;   // null = simplex (RX=TX), string = split RX freq
+let localQsos          = [];     // full mirror of the master log kept in memory
+let usbStatus          = {};     // USB backup status from server
+const stationCallsigns = new Map(); // sessionId -> {callsign, isMaster, online}
+let latestPeers = [];  // peer list from PEER_LIST_UPDATE
+
+// ── Commands ───────────────────────────────────────────────────────────────────
+const COMMANDS = {
+  'SSB':  () => setMode('SSB', true),
+  'USB':  () => setMode('SSB', true),
+  'LSB':  () => setMode('SSB', true),
+  'CW':   () => setMode('CW',  true),
+  'FT8':  () => setMode('FT8', true),
+  'DIGI': () => setMode('FT8', true),
+  'RTTY': () => setMode('FT8', true),
+  'OPON': () => openOPON(),
+  'QST':  () => openQST(),
+  'STATS': () => openStatsPage(),
+  'ESM':  () => toggleESM(),
+  'WPM':  () => openWpmDialog(),
+  'QRZ':  () => addMsg('MACRO', 'QRZ VK0EK — standing by', 'alt'),
+};
+
+function tryCommand(raw) {
+  const v = raw.trim().toUpperCase();
+
+  // Named command
+  if (COMMANDS[v]) {
+    COMMANDS[v]();
+    showCmd('CMD: ' + v);
+    document.getElementById('callIn').value = '';
+    return true;
+  }
+
+  // WPM speed shortcut — e.g. "WPM25" or "WPM 25"
+  const wpmM = v.match(/^WPM\s*(\d+)$/);
+  if (wpmM) {
+    const spd = Math.max(5, Math.min(60, parseInt(wpmM[1])));
+    setCwSpeed(spd);
+    showCmd('CW Speed: ' + spd + ' WPM');
+    document.getElementById('callIn').value = '';
+    return true;
+  }
+
+  // Frequency shortcut — e.g. "14225", "14.225", "7023"
+  const fraw = v.replace(',', '.');
+  const fnum = parseFloat(fraw);
+  if (!isNaN(fnum) && fnum > 1 && fnum < 60000 && /^[\d.,]+$/.test(v)) {
+    const fmhz = fnum > 1000 ? fnum / 1000 : fnum;
+    currentFreq = fmhz.toFixed(3);
+    currentBand = getBand(fmhz);
+    document.getElementById('freqdsp').textContent = currentFreq;
+    document.getElementById('banddsp').textContent = currentBand;
+    document.getElementById('sb-cat').textContent  = currentFreq + ' ' + (mode === 'SSB' ? 'USB' : mode);
+    saveState('freq', currentFreq);
+    saveState('band', currentBand);
+    showCmd('Freq: ' + currentFreq + ' MHz — ' + currentBand);
+    addMsg('SYS', 'Frequency → ' + currentFreq + ' ' + currentBand, 'cmd');
+    // Tell rig to follow
+    sendWS({ type: 'SET_FREQ', freq: parseFloat(currentFreq) });
+    document.getElementById('callIn').value = '';
+    return true;
+  }
+
+  return false;
+}
+
+function showCmd(txt) {
+  const b = document.getElementById('cmdbanner');
+  b.textContent = txt;
+  b.classList.add('show');
+  clearTimeout(showCmd._t);
+  showCmd._t = setTimeout(() => b.classList.remove('show'), 2200);
+}
+
+// ── Band helper ────────────────────────────────────────────────────────────────
+function getBand(f) {
+  const v = parseFloat(f);
+  if (v >= 1.8   && v < 2.0)    return '160M';
+  if (v >= 3.5   && v < 4.0)    return '80M';
+  if (v >= 5.3   && v < 5.4)    return '60M';
+  if (v >= 7.0   && v < 7.3)    return '40M';
+  if (v >= 10.1  && v < 10.2)   return '30M';
+  if (v >= 14.0  && v < 14.35)  return '20M';
+  if (v >= 18.0  && v < 18.2)   return '17M';
+  if (v >= 21.0  && v < 21.45)  return '15M';
+  if (v >= 24.8  && v < 25.0)   return '12M';
+  if (v >= 28.0  && v < 30.0)   return '10M';
+  if (v >= 50.0  && v < 54.0)   return '6M';
+  return '??';
+}
+
+function nowUTC() { return new Date().toISOString().slice(11, 16); }
+
+function isDupe(call, band, m) {
+  return qsos.some(q => q.callsign === call.toUpperCase() && q.band === band && q.mode === m);
+}
+function isNewCall(call) {
+  return !qsos.some(q => q.callsign === call.toUpperCase());
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────────────────
+function connectWS() {
+  const wsPort = cfg.wsPort || 7373;
+  ws = new WebSocket('ws://' + location.hostname + ':' + wsPort);
+
+  ws.onopen = () => {
+    clearTimeout(wsReconnectTimer);
+    document.getElementById('sb-ws').textContent = 'connected';
+    document.getElementById('sb-ws-wrap').className = 'sbi';
+    ws.send(JSON.stringify({
+      type:       'HANDSHAKE',
+      sessionId:  sessionId,
+      operatorId: stationId || 'OP1',
+      callsign:   currentOp || stationId || 'OP1',
+      isMaster:   cfg.role === 'master',
+    }));
+    addMsg('SYS', 'Connected — ' + (stationId || 'OP1'), 'ok');
+    if (pendingQueue.length > 0) {
+      addMsg('SYS', 'Flushing ' + pendingQueue.length + ' queued QSOs...', 'alt');
+      pendingQueue.forEach(q => ws.send(JSON.stringify({ type: 'LOG_QSO', qso: q })));
+    }
+    // Announce freq/mode/op so we appear in all other stations' op panels immediately
+    setTimeout(() => broadcastOpState(), 600);
+  };
+
+  ws.onmessage = e => {
+    let msg; try { msg = JSON.parse(e.data); } catch { return; }
+    handleMsg(msg);
+  };
+
+  ws.onclose = () => {
+    document.getElementById('sb-ws').textContent = 'reconnecting...';
+    document.getElementById('sb-ws-wrap').className = 'sbi warn';
+    wsReconnectTimer = setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+function handleMsg(msg) {
+  switch (msg.type) {
+    case 'FULL_SYNC':
+      window._stationCallsign = msg.callsign || '';
+      // Re-fetch config on sync to pick up CW/WSJT settings
+      fetch('/api/config').then(r=>r.json()).then(c=>{ loadCwConfig(c); renderCWMacroBar(); }).catch(()=>{});
+      if (msg.sessionId) sessionId = msg.sessionId;
+      if (msg.masterId)  masterId  = msg.masterId;
+      isThisMaster = !!msg.youAreMaster;
+      if (msg.peers) renderPeerList(msg.peers);
+      updateRoleIndicators();
+      qsos = msg.qsos || [];
+      localQsos = [...qsos];
+      recentTimes = qsos.map(q => new Date(q.logged_at).getTime());
+      if (msg.usbStatus) { usbStatus = msg.usbStatus; updateUSBIndicator(); }
+      if (msg.operators && msg.operators.length > 0) {
+        msg.operators.forEach(op => { if (!operators.includes(op)) operators.push(op); });
+      }
+      // Build a pending rate map: callsign -> [timestamps]
+      // This is merged into opStatus when OP_STATE/STATION_LIST arrives with the session key
+      pendingRates.clear();
+      qsos.forEach(q => {
+        if (!q.operator) return;
+        if (!pendingRates.has(q.operator)) pendingRates.set(q.operator, []);
+        pendingRates.get(q.operator).push(new Date(q.logged_at).getTime());
+      });
+      // Apply pending rates to any opStatus entries that already exist
+      applyPendingRates();
+      renderAll();
+      addMsg('SYS', 'Synced ' + qsos.length + ' QSOs from master', 'ok');
+      break;
+    case 'QSO_ACK':
+      pendingQueue = pendingQueue.filter(q => q.id !== msg.id);
+      document.getElementById('tv-p').textContent = pendingQueue.length;
+      document.getElementById('sb-q').textContent = pendingQueue.length;
+      break;
+    case 'QSO_NEW':
+      if (!qsos.find(q => q.id === msg.qso.id)) {
+        qsos.push(msg.qso);
+        localQsos.push(msg.qso);   // mirror to local copy
+        recentTimes.push(Date.now());
+        if (msg.qso.operator) recordOpQSO(msg.qso.operator, msg.qso.logged_at);
+        renderAll();
+        // Only show in msg log if it came from another operator
+        const myOp = currentOp || stationId || 'OP1';
+        if (msg.qso.operator && msg.qso.operator !== myOp) {
+          addMsg(msg.qso.operator, msg.qso.callsign + ' ' + msg.qso.band + ' ' + msg.qso.mode);
+        }
+      }
+      break;
+    case 'QSO_EDIT':
+      const ei = qsos.findIndex(q => q.id === msg.qso.id);
+      if (ei >= 0) { qsos[ei] = { ...qsos[ei], ...msg.qso }; renderAll(); }
+      break;
+    case 'QSO_DELETE':
+      qsos = qsos.filter(q => q.id !== msg.id);
+      renderAll();
+      break;
+    case 'STATION_LIST':
+      if (msg.masterId) {
+        masterId = msg.masterId;
+        updateRoleIndicators();
+      }
+      // Merge operators list if server sent one
+      if (msg.operators && msg.operators.length > 0) {
+        msg.operators.forEach(op => { if (!operators.includes(op)) operators.push(op); });
+      }
+      renderStations(msg.stations);
+      // Update op panel for every station in the list
+      (msg.stations || []).forEach(s => {
+        const info = opStatus.get(s.id) || {};
+        updateOpStatus(s.id, {
+          callsign:   s.callsign || info.callsign || s.id,
+          operatorId: s.operatorId || s.id,
+          isMaster:   s.isMaster  || false,
+          online:     s.online,
+        });
+      });
+      // Remove entries no longer in STATION_LIST entirely (they have disconnected)
+      const activeIds = new Set((msg.stations || []).map(s => s.id));
+      const toDelete  = [];
+      opStatus.forEach((info, sid) => {
+        if (!activeIds.has(sid)) toDelete.push(sid);
+      });
+      toDelete.forEach(sid => opStatus.delete(sid));
+      // Also purge duplicate callsign entries — keep only the online/most-recent one
+      purgeDuplicateCallsigns();
+      applyPendingRates();
+      renderOpPanel();
+      break;
+    case 'OP_STATE':
+      updateOpStatus(msg.stationId, {
+        callsign:   msg.callsign || msg.stationId,
+        operatorId: msg.operatorId || msg.stationId,
+        txFreq:     msg.txFreq,
+        rxFreq:     msg.rxFreq || msg.txFreq,
+        mode:       msg.mode,
+        online:     true,
+      });
+      // Sync callsign into stationCallsigns so netbar shows operator name
+      if (stationCallsigns.has(msg.stationId)) {
+        const entry = stationCallsigns.get(msg.stationId);
+        stationCallsigns.set(msg.stationId, {
+          ...entry,
+          callsign:   msg.callsign || entry.callsign,
+          operatorId: msg.operatorId || entry.operatorId,
+        });
+        rebuildNetBar();
+      }
+      // Remove any stale duplicate entries for the same callsign
+      purgeDuplicateCallsigns();
+      applyPendingRates();
+      break;
+
+    case 'OPON_CHANGED': {
+      // Another station changed operator — update their callsign in the panel
+      updateOpStatus(msg.stationId, { callsign: msg.callsign, online: true });
+      // Update network bar for this station
+      // Update callsign in stationCallsigns for all sessions with this stationId
+      stationCallsigns.forEach((info, sid) => {
+        if (sid === msg.stationId) info.callsign = msg.callsign;
+      });
+      rebuildNetBar();
+      if (msg.operators) {
+        msg.operators.forEach(op => { if (!operators.includes(op)) operators.push(op); });
+      }
+      renderOpPanel();
+      addMsg(msg.stationId, 'Operator → ' + msg.callsign, 'alt');
+      break;
+    }
+    case 'PONG':
+      if (msg.stats) updateStatsFrom(msg.stats);
+      if (msg.usbStatus) { usbStatus = msg.usbStatus; updateUSBIndicator(); }
+      if (msg.operators) msg.operators.forEach(op => { if (!operators.includes(op)) operators.push(op); });
+      break;
+
+    case 'CAT_STATE':
+      applyCATState(msg);
+      break;
+
+    case 'SOLAR_UPDATE':
+      if (msg.solar) applySolar(msg.solar);
+      break;
+
+    case 'ACHIEVEMENT':
+      handleAchievement(msg);
+      break;
+
+    case 'PEER_LIST_UPDATE':
+      renderPeerList(msg.peers || []);
+      break;
+
+    case 'QST':
+      addQSTMsg(msg.from || '?', msg.text || '', false, msg.ts);
+      addMsg(msg.from || '?', '[QST] ' + msg.text, 'cmd');
+      break;
+
+    case 'FULL_RESET':
+      // Server-side log has been wiped — clear all local state and reload
+      localStorage.removeItem(ACH_STORE_KEY);
+      saveState('qst',     []);
+      saveState('bestHr',  0);
+      saveState('myBestHr',0);
+      localStorage.removeItem('tl_server_version'); // force version re-check on reload
+      // Brief pause so operator sees the reload happening
+      setTimeout(() => location.reload(), 800);
+      break;
+  }
+}
+
+function sendWS(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) { ws.send(JSON.stringify(msg)); return true; }
+  return false;
+}
+
+// ── Mode ───────────────────────────────────────────────────────────────────────
+function setMode(m, sendToRig) {
+  mode = m;
+  document.getElementById('mb-SSB').className = 'mb' + (m === 'SSB' ? ' ssb' : '');
+  document.getElementById('mb-CW').className  = 'mb' + (m === 'CW'  ? ' cw'  : '');
+  document.getElementById('mb-FT8').className = 'mb' + (m === 'FT8' ? ' ft8' : '');
+  const rst = { SSB: ['59','59'], CW: ['599','599'], FT8: ['-10','-12'] }[m];
+  document.getElementById('rstS').value = rst[0];
+  document.getElementById('rstR').value = rst[1];
+  saveState('mode', m);
+  // Only send to rig when explicitly requested (not on boot restore or CAT state updates)
+  if (sendToRig) sendWS({ type: 'SET_MODE', mode: m });
+  renderCWMacroBar(); // show/hide CW bar based on new mode
+  broadcastOpState();
+}
+
+function broadcastOpState() {
+  sendWS({
+    type:       'OP_STATE',
+    stationId:  sessionId,
+    operatorId: stationId || 'OP1',
+    callsign:   currentOp || stationId || 'OP1',
+    txFreq:     currentFreq,
+    rxFreq:     currentRxFreq || currentFreq,
+    mode:       mode,
+  });
+  // Update our own entry in the op panel immediately
+  updateOpStatus(sessionId, {
+    callsign:   currentOp || stationId || 'OP1',
+    operatorId: stationId || 'OP1',
+    txFreq:     currentFreq,
+    rxFreq:     currentRxFreq || currentFreq,
+    mode:       mode,
+    online:     true,
+    isMaster:   isThisMaster,
+  });
+}
+
+// ── Entry check ────────────────────────────────────────────────────────────────
+function checkEntry() {
+  const call = document.getElementById('callIn').value.trim().toUpperCase();
+  document.getElementById('dupebanner').classList.remove('show');
+  document.getElementById('newbanner').classList.remove('show');
+  renderSupercheck(call);
+  if (call.length < 3) return;
+  const d = isDupe(call, currentBand, mode);
+  const n = !d && isNewCall(call);
+  if (d) document.getElementById('dupebanner').classList.add('show');
+  else if (n) document.getElementById('newbanner').classList.add('show');
+}
+
+// ── Logging ────────────────────────────────────────────────────────────────────
+function makeUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+// ── ESM / CW helpers ────────────────────────────────────────────────────────
+function isCWMode() { return mode === 'CW' && cwConfigEnabled && cwRigOnline; }
+
+function expandMacro(template, call) {
+  const rst = mode === 'CW' ? '599' : '59';
+  return template
+    .replace(/\{CALL\}/gi, call)
+    .replace(/\{RST\}/gi, rst)
+    .replace(/\{NR\}/gi, String(qsos.filter(q=>!q.dupe_flag).length + 1))
+    .replace(/\{OP\}/gi, currentOp || stationId || 'OP1')
+    .replace(/\{MYCALL\}/gi, window._stationCallsign || '')
+    .trim();
+}
+
+function sendCW(text) {
+  if (!text) return;
+  sendWS({ type: 'CWX_SEND', text });
+}
+
+function toggleESM() {
+  cwConfigEnabled = !cwConfigEnabled;
+  // Persist enabled state to server config
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cw: { enabled: cwConfigEnabled } })
+  }).catch(() => {});
+  renderCWMacroBar();
+  showCmd('ESM: ' + (cwConfigEnabled ? 'ON' : 'OFF'));
+  addMsg('SYS', 'CW ESM ' + (cwConfigEnabled ? 'enabled' : 'disabled'), 'cmd');
+}
+
+function setCwSpeed(wpm) {
+  cwConfig.speed = wpm;
+  // Persist to server
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cw: { speed: wpm } })
+  }).catch(() => {});
+  // Also tell radio immediately
+  sendWS({ type: 'CWX_SPEED', wpm });
+  renderCWMacroBar();
+}
+
+function openWpmDialog() {
+  const current = cwConfig.speed || 25;
+  const overlay = document.createElement('div');
+  overlay.id = 'wpm-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:24px 28px;width:260px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:13px;font-weight:700;color:#1e3a5f;letter-spacing:.5px;margin-bottom:12px">CW SPEED (WPM)</div>
+      <input type="range" id="wpm-slider" min="5" max="60" value="${current}"
+        style="width:100%;accent-color:#1e3a5f;margin-bottom:8px"
+        oninput="document.getElementById('wpm-val').textContent=this.value"/>
+      <div style="text-align:center;font-size:28px;font-weight:700;color:#1e3a5f;font-family:'Courier New',monospace;margin-bottom:4px">
+        <span id="wpm-val">${current}</span> WPM
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button onclick="applyWpm()" style="flex:1;padding:9px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer">Set</button>
+        <button onclick="document.getElementById('wpm-overlay').remove()" style="flex:1;padding:9px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;cursor:pointer">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('callIn').value = '';
+}
+
+function applyWpm() {
+  const wpm = parseInt(document.getElementById('wpm-slider').value);
+  setCwSpeed(wpm);
+  document.getElementById('wpm-overlay')?.remove();
+  showCmd('CW Speed: ' + wpm + ' WPM');
+  document.getElementById('callIn').focus();
+}
+
+function sendCwCQ() {
+  const tx = expandMacro(cwConfig.cqMacro, '');
+  sendCW(tx);
+  showCmd('CQ: ' + tx);
+  esmState = 'IDLE';
+  esmCall  = '';
+  updateESMIndicator();
+}
+
+function clearCW() {
+  sendWS({ type: 'CWX_CLEAR' });
+  esmState = 'IDLE';
+  esmCall  = '';
+  updateESMIndicator();
+}
+
+function updateESMIndicator() {
+  const ind = document.getElementById('esm-indicator');
+  if (!ind) return;
+  const labels = { IDLE: '', CALLING: '▶ SENDING…', TU: '▶ TU…' };
+  ind.textContent = labels[esmState] || '';
+  ind.style.display = esmState !== 'IDLE' ? 'block' : 'none';
+}
+
+function loadCwConfig(cfg) {
+  // Load CW config from server — call this on boot and when config changes
+  if (!cfg) return;
+  const cw = cfg.cw || {};
+  cwConfigEnabled      = !!cw.enabled;
+  cwConfig.speed       = cw.speed      || 25;
+  cwConfig.callMacro   = cw.callMacro  || '{CALL} 5NN';
+  cwConfig.tuMacro     = cw.tuMacro    || 'TU';
+  cwConfig.cqMacro     = cw.cqMacro    || 'CQ CQ {MYCALL} {MYCALL}';
+  cwConfig.extraMacros = cw.macros     || [];
+}
+
+function setCwEnabled(online) {
+  cwRigOnline = online;
+  renderCWMacroBar();
+}
+
+function renderCWMacroBar() {
+  const bar = document.getElementById('cw-macro-bar');
+  if (!bar) return;
+  // Show bar whenever in CW mode — rig may not be connected yet on page load
+  if (mode !== 'CW') { bar.style.display='none'; return; }
+  bar.style.display = 'flex';
+  const rigWarn = (!cwRigOnline) ? '<span style="font-size:10px;color:#f59e0b">⚠ rig offline</span>' : '';
+  const extras = (cwConfig.extraMacros||[]).map((m,i)=>
+    `<button class="cw-macro-btn" onclick="sendCW(expandMacro('${m.text.replace(/'/g,"\'")}', esmCall||''))" title="${m.text}">${m.label}</button>`
+  ).join('');
+  bar.innerHTML = `
+    <span style="font-size:10px;color:#7090b0;letter-spacing:.5px;white-space:nowrap">CW ${cwConfig.speed}WPM</span>
+    ${rigWarn}
+    <button class="cw-macro-btn" onclick="sendCwCQ()" title="${cwConfig.cqMacro}">CQ</button>
+    <button class="cw-macro-btn" onclick="sendCW(expandMacro(cwConfig.callMacro, esmCall||document.getElementById('callIn').value.trim().toUpperCase()))"
+      title="${'{CALL} 5NN'}">CALL+5NN</button>
+    <button class="cw-macro-btn" onclick="sendCW(expandMacro(cwConfig.tuMacro,''))" title="TU">TU</button>
+    ${extras}
+    <button class="cw-macro-btn stop" onclick="clearCW()" title="Stop CW [Esc]">■ STOP</button>`;
+}
+
+function doLog() {
+  const call = document.getElementById('callIn').value.trim().toUpperCase();
+
+  // Empty call box in CW mode → send CQ
+  if (!call) {
+    if (isCWMode()) {
+      sendCwCQ();
+    }
+    return;
+  }
+
+  if (tryCommand(call)) return;
+
+  // ── ESM mode: CW state machine ─────────────────────────────────────────────
+  if (isCWMode()) {
+    if (esmState === 'IDLE' || esmCall !== call) {
+      // First Enter (or different call): send callsign macro, enter CALLING state
+      esmCall  = call;
+      esmState = 'CALLING';
+      updateESMIndicator();
+      const tx = expandMacro(cwConfig.callMacro, call);
+      sendCW(tx);
+      showCmd('CW: ' + tx);
+      return; // don't log yet
+    }
+    if (esmState === 'CALLING') {
+      // Second Enter: log QSO + send TU
+      _commitQSO(call);
+      esmState = 'TU';
+      updateESMIndicator();
+      const tu = expandMacro(cwConfig.tuMacro, call);
+      sendCW(tu);
+      esmState = 'IDLE';
+      esmCall  = '';
+      updateESMIndicator();
+      return;
+    }
+  }
+
+  // ── Normal (non-CW ESM) log ─────────────────────────────────────────────────
+  _commitQSO(call);
+}
+
+function _commitQSO(call) {
+  const qso = {
+    id:        makeUUID(),
+    callsign:  call,
+    freq:      parseFloat(currentFreq),
+    band:      currentBand,
+    mode:      mode,
+    rst_sent:  document.getElementById('rstS').value.trim(),
+    rst_rcvd:  document.getElementById('rstR').value.trim(),
+    exchange:  document.getElementById('xchIn').value.trim().toUpperCase(),
+    name:      '',
+    logged_at: new Date().toISOString(),
+    operator:  currentOp || stationId || 'OP1',
+  };
+
+  qso.seq       = qsos.length + 1;
+  qso.dupe_flag = isDupe(call, currentBand, mode) ? 1 : 0;
+  qsos.push(qso);
+  recentTimes.push(Date.now());
+  recordOpQSO(sessionId || stationId || 'OP1', qso.logged_at);
+
+  doWipe();
+
+  pendingQueue.push(qso);
+  document.getElementById('tv-p').textContent = pendingQueue.length;
+  document.getElementById('sb-q').textContent = pendingQueue.length;
+  if (!sendWS({ type: 'LOG_QSO', qso })) {
+    addMsg('SYS', 'Offline — QSO queued locally', 'alt');
+  }
+
+  renderAll();
+}
+
+function doWipe() {
+  document.getElementById('callIn').value = '';
+  document.getElementById('nrIn').value   = '';
+  document.getElementById('xchIn').value  = '';
+  document.getElementById('dupebanner').classList.remove('show');
+  document.getElementById('newbanner').classList.remove('show');
+  document.getElementById('cmdbanner').classList.remove('show');
+  document.getElementById('supercheck').classList.remove('active');
+  updateDXInfo('');
+  document.getElementById('callIn').focus();
+}
+
+function doExport() { window.open('/api/export.adi', '_blank'); }
+
+// ── STATS page ────────────────────────────────────────────────────────────────
+function openStatsPage() {
+  doWipe();
+  window.open('/stats.html', '_blank');
+}
+
+// ── QST inter-operator messaging ──────────────────────────────────────────────
+function openQST() {
+  const input = document.getElementById('qstInput');
+  input.value = '';
+  document.getElementById('qstoverlay').classList.add('show');
+  setTimeout(() => input.focus(), 40);
+}
+
+function closeQST() {
+  document.getElementById('qstoverlay').classList.remove('show');
+  document.getElementById('qstInput').value = '';
+  document.getElementById('callIn').focus();
+}
+
+function sendQST() {
+  const v = document.getElementById('qstInput').value.trim();
+  if (!v) { closeQST(); return; }
+  const ts = new Date().toISOString();
+  sendWS({ type: 'QST', text: v, from: currentOp || stationId || 'OP1', ts });
+  addQSTMsg(currentOp || stationId || 'OP1', v, true, ts);
+  closeQST();
+}
+
+// In-memory QST message store (also saved to localStorage)
+let qstMessages = [];
+
+function addQSTMsg(from, text, isMine, ts) {
+  const el = document.getElementById('qstlog');
+  if (!el) return;
+  const time = ts ? ts.slice(11,16) : new Date().toISOString().slice(11,16);
+  // Save to persistent store
+  qstMessages.push({ from, text, isMine, ts: ts || new Date().toISOString() });
+  if (qstMessages.length > 100) qstMessages = qstMessages.slice(-100);
+  saveState('qst', qstMessages);
+  // Render
+  const d = document.createElement('div');
+  d.className = 'qst-msg' + (isMine ? ' qst-mine' : '');
+  d.innerHTML = '<span class="qst-time">' + time + '</span>' +
+                '<span class="qst-from">' + from + '</span>' +
+                '<span class="qst-text">' + text.replace(/</g,'&lt;') + '</span>';
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  const hdr = document.getElementById('qst-hdr');
+  if (hdr && !isMine) {
+    hdr.classList.add('qst-new');
+    setTimeout(() => hdr.classList.remove('qst-new'), 3000);
+  }
+}
+
+function restoreQSTMessages() {
+  const msgs = loadState('qst', []);
+  if (!msgs.length) return;
+  qstMessages = msgs;
+  const el = document.getElementById('qstlog');
+  if (!el) return;
+  el.innerHTML = '';
+  msgs.forEach(m => {
+    const time = (m.ts || '').slice(11,16);
+    const d = document.createElement('div');
+    d.className = 'qst-msg' + (m.isMine ? ' qst-mine' : '');
+    d.innerHTML = '<span class="qst-time">' + time + '</span>' +
+                  '<span class="qst-from">' + (m.from || '?') + '</span>' +
+                  '<span class="qst-text">' + (m.text || '').replace(/</g,'&lt;') + '</span>';
+    el.appendChild(d);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+document.getElementById('qstInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter')  { e.preventDefault(); sendQST(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeQST(); }
+});
+
+// ── OPON ───────────────────────────────────────────────────────────────────────
+function openOPON() {
+  const input = document.getElementById('oponCallIn');
+  input.value = currentOp || '';
+  document.getElementById('oponoverlay').classList.add('show');
+  setTimeout(() => { input.focus(); input.select(); }, 40);
+}
+
+function closeOPON() {
+  document.getElementById('oponoverlay').classList.remove('show');
+  document.getElementById('oponCallIn').value = '';
+  document.getElementById('callIn').focus();
+}
+
+function confirmOPON() {
+  const v = document.getElementById('oponCallIn').value.trim().toUpperCase();
+  if (!v) { closeOPON(); return; }
+  currentOp = v;
+  // Persist so page refresh restores this operator automatically
+  saveState('op', v);
+  document.getElementById('opbadge').textContent   = v;
+  document.getElementById('opstation').textContent = v + ' / ' + (stationId || 'OP1');
+  addMsg('SYS', 'Operator → ' + v, 'alt');
+  sendWS({ type: 'OPON_CHANGE', callsign: v });
+  broadcastOpState();
+  updateOpStatus(sessionId || stationId || 'OP1', { callsign: v, operatorId: stationId || 'OP1', online: true, isMaster: isThisMaster });
+  renderOpPanel();
+  closeOPON();
+}
+
+// Wire Enter/Escape directly on the OPON input
+document.getElementById('oponCallIn').addEventListener('keydown', e => {
+  if (e.key === 'Enter')  { e.preventDefault(); confirmOPON(); }
+  if (e.key === 'Escape') { e.preventDefault(); closeOPON(); }
+});
+
+// ── Operator status panel ──────────────────────────────────────────────────────
+// opStatus: Map of sessionId -> { callsign, txFreq, rxFreq, mode, online, qsoTimes[] }
+// Keys are ALWAYS session IDs — never callsigns. This prevents duplicate rows.
+const opStatus = new Map();
+
+// pendingRates: Map of callsign -> [timestamps]
+// Built from QSOs during FULL_SYNC, merged into opStatus when session entries arrive
+const pendingRates = new Map();
+
+function purgeDuplicateCallsigns() {
+  // If multiple opStatus entries share the same callsign, keep only the one
+  // that is online (or the most recently updated one if all offline).
+  const byCallsign = new Map(); // callsign -> [sid, ...]
+  opStatus.forEach((info, sid) => {
+    const call = info.callsign || '';
+    if (!call) return;
+    if (!byCallsign.has(call)) byCallsign.set(call, []);
+    byCallsign.get(call).push(sid);
+  });
+  byCallsign.forEach((sids, call) => {
+    if (sids.length <= 1) return;
+    // Keep the online one; if multiple online, keep the one that is "me"
+    const me = sessionId || stationId || 'OP1';
+    const onlineSids = sids.filter(s => opStatus.get(s)?.online);
+    const keepSid = sids.includes(me) ? me
+                  : onlineSids.length > 0 ? onlineSids[0]
+                  : sids[sids.length - 1];
+    sids.forEach(s => { if (s !== keepSid) opStatus.delete(s); });
+  });
+}
+
+function applyPendingRates() {
+  const cutoff = Date.now() - 7200000;
+  for (const [, entry] of opStatus) {
+    const times = pendingRates.get(entry.callsign);
+    if (times) {
+      entry.qsoTimes = times.filter(t => t > cutoff);
+    }
+  }
+}
+
+function updateOpStatus(stationId, patch) {
+  const existing = opStatus.get(stationId) || {
+    callsign: stationId,
+    txFreq: null,
+    rxFreq: null,
+    mode: 'SSB',
+    online: true,
+    qsoTimes: []
+  };
+  opStatus.set(stationId, { ...existing, ...patch });
+  renderOpPanel();
+}
+
+function recordOpQSO(operatorCallOrId, timestamp) {
+  // opStatus is keyed by sessionId, but QSOs carry the operator callsign.
+  // Search by callsign first, fall back to direct key lookup.
+  let entry = null;
+  let entryKey = null;
+  // Try direct key first (works for own QSOs logged via doLog)
+  if (opStatus.has(operatorCallOrId)) {
+    entry    = opStatus.get(operatorCallOrId);
+    entryKey = operatorCallOrId;
+  } else {
+    // Search by callsign field (for QSOs from other stations)
+    for (const [key, val] of opStatus) {
+      if (val.callsign === operatorCallOrId) {
+        entry    = val;
+        entryKey = key;
+        break;
+      }
+    }
+  }
+  if (!entry) return;
+  entry.qsoTimes.push(new Date(timestamp).getTime());
+  const cutoff = Date.now() - 7200000;
+  entry.qsoTimes = entry.qsoTimes.filter(t => t > cutoff);
+  renderOpPanel();
+}
+
+function calcRate(qsoTimes) {
+  const now = Date.now();
+  return qsoTimes.filter(t => now - t < 3600000).length;
+}
+
+function renderOpPanel() {
+  const el = document.getElementById('oprows');
+  if (opStatus.size === 0) {
+    el.innerHTML = '<div class="op-no-data">No operators connected</div>';
+    return;
+  }
+
+  const me = sessionId || stationId || 'OP1';
+  const rows = [...opStatus.entries()].sort((a, b) => {
+    if (a[0] === me) return -1;
+    if (b[0] === me) return 1;
+    return a[0].localeCompare(b[0]);
+  });
+
+  // Only show rows for sessions that have announced themselves via OP_STATE
+  // (have a real freq/mode) or are our own session. Suppress bare placeholder
+  // entries from STATION_LIST that haven't broadcast any state yet.
+  // Also suppress entries whose callsign matches a raw stationId pattern (OP1, OP2 etc.)
+  const isStationId = (call) => /^OP\d+$/i.test(call) || /^STATION\d*$/i.test(call);
+
+  const filteredRows = rows.filter(([sid, s]) => {
+    if (sid === me) return true;   // always show self
+    const call = s.callsign || '';
+    if (isStationId(call)) return false;  // suppress OP1, OP2 etc.
+    // Show if they have announced freq/mode (real active session)
+    if (s.txFreq) return true;
+    // Show if they have a real callsign (has letter+digit, not just default)
+    return call.length >= 3 && /[A-Z].*\d|\d.*[A-Z]/i.test(call);
+  });
+
+  if (filteredRows.length === 0) {
+    el.innerHTML = '<div class="op-no-data">No operators connected</div>';
+    return;
+  }
+
+  el.innerHTML = filteredRows.map(([sid, s]) => {
+    const isMe    = sid === me;
+    const rate    = calcRate(s.qsoTimes);
+    const isSplit = s.rxFreq && s.rxFreq !== s.txFreq;
+    const rowCls  = 'oprow-item' + (isMe ? ' me-row' : '') + (s.online ? '' : ' offline');
+    const callCls = 'op-call' + (isMe ? ' me-call' : '');
+    const modeCls = 'op-mode ' + (s.mode || 'SSB');
+    const rateCls = 'op-rate' + (rate >= 60 ? ' hot' : rate === 0 ? ' cold' : '');
+    const dotCls  = 'op-status ' + (s.online ? 'online' : 'offline');
+    const txDisp  = s.txFreq || '---';
+    const rxDisp  = isSplit ? s.rxFreq : (s.txFreq ? s.txFreq : '---');
+    const rxCls   = 'op-freq' + (isSplit ? ' split' : ' rx');
+
+    const isMasterRow = s.isMaster || false;
+    const displayCall = s.callsign || s.operatorId || sid;
+    const masterBadge = isMasterRow
+      ? '<div style="font-size:9px;background:#fbbf24;color:#1e3a5f;border-radius:2px;padding:1px 6px;font-weight:700;letter-spacing:1px;display:inline-block;margin-top:2px">MASTER</div>'
+      : '';
+    return `<div class="${rowCls}">
+      <div class="op-call-cell">
+        <div class="${callCls}">${displayCall}</div>
+        ${masterBadge}
+      </div>
+      <div class="op-freq">${txDisp}</div>
+      <div class="${rxCls}">${rxDisp}</div>
+      <div><span class="${modeCls}">${s.mode || '---'}</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="${rateCls}">${rate}</span>
+        <div class="${dotCls}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Refresh rates every 30s even without new QSOs (rates decay over time)
+setInterval(renderOpPanel, 30000);
+
+// ── Edit modal ─────────────────────────────────────────────────────────────────
+function openEdit(id) {
+  const q = qsos.find(x => x.id === id);
+  if (!q) return;
+  editQsoId = id;
+  document.getElementById('eNr').textContent   = '#' + (q.seq || '') + ' ' + q.callsign;
+  document.getElementById('eCall').value  = q.callsign;
+  document.getElementById('eRstS').value  = q.rst_sent  || '';
+  document.getElementById('eRstR').value  = q.rst_rcvd  || '';
+  document.getElementById('eXch').value   = q.exchange  || '';
+  document.getElementById('eName').value  = q.name      || '';
+  document.getElementById('editoverlay').classList.add('show');
+  document.getElementById('eCall').focus();
+}
+
+function closeEdit() {
+  document.getElementById('editoverlay').classList.remove('show');
+  editQsoId = null;
+}
+
+function saveEdit() {
+  if (!editQsoId) return;
+  const patch = {
+    id:       editQsoId,
+    callsign: document.getElementById('eCall').value.trim().toUpperCase(),
+    rst_sent: document.getElementById('eRstS').value.trim(),
+    rst_rcvd: document.getElementById('eRstR').value.trim(),
+    exchange: document.getElementById('eXch').value.trim().toUpperCase(),
+    name:     document.getElementById('eName').value.trim(),
+  };
+  const i = qsos.findIndex(q => q.id === editQsoId);
+  if (i >= 0) qsos[i] = { ...qsos[i], ...patch };
+  sendWS({ type: 'EDIT_QSO', qso: patch });
+  closeEdit();
+  renderAll();
+  addMsg('SYS', 'Edited: ' + patch.callsign, 'alt');
+}
+
+function deleteEdit() {
+  if (!editQsoId) return;
+  const q = qsos.find(x => x.id === editQsoId);
+  qsos = qsos.filter(x => x.id !== editQsoId);
+  sendWS({ type: 'DELETE_QSO', id: editQsoId });
+  closeEdit();
+  renderAll();
+  if (q) addMsg('SYS', 'Deleted: ' + q.callsign, 'er');
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+const BANDS = ['160M','80M','60M','40M','30M','20M','17M','15M','12M','10M','6M'];
+
+// ── DXCC prefix → country/continent lookup ─────────────────────────────────
+const DXCC = {
+  'VP2E':{c:'Anguilla',z:'NA'},
+  'VP2M':{c:'Montserrat',z:'NA'},
+  'VP2V':{c:'British Virgin Islands',z:'NA'},
+  'SV/A':{c:'Mount Athos',z:'EU'},
+  'VK9X':{c:'Christmas Island',z:'OC'},
+  'VK9C':{c:'Cocos Keeling',z:'OC'},
+  'LU1Z':{c:'Antarctica',z:'AN'},
+  'FR/G':{c:'Glorioso',z:'AF'},
+  'FR/J':{c:'Juan de Nova',z:'AF'},
+  'FR/T':{c:'Tromelin',z:'AF'},
+  'FT5W':{c:'Crozet Islands',z:'AF'},
+  'FT5X':{c:'Kerguelen',z:'AF'},
+  'FT5Z':{c:'Amsterdam/St Paul',z:'AF'},
+  'KH0':{c:'Mariana Islands',z:'OC'},
+  'KH1':{c:'Baker/Howland',z:'OC'},
+  'KH2':{c:'Guam',z:'OC'},
+  'KH3':{c:'Johnston Island',z:'OC'},
+  'KH4':{c:'Midway Island',z:'OC'},
+  'KH5':{c:'Palmyra/Jarvis',z:'OC'},
+  'KH6':{c:'Hawaii',z:'OC'},
+  'KH7':{c:'Kure Island',z:'OC'},
+  'KH8':{c:'American Samoa',z:'OC'},
+  'KH9':{c:'Wake Island',z:'OC'},
+  'KL7':{c:'Alaska',z:'NA'},
+  'KP1':{c:'Navassa Island',z:'NA'},
+  'KP2':{c:'US Virgin Islands',z:'NA'},
+  'KP3':{c:'Puerto Rico',z:'NA'},
+  'KP4':{c:'Puerto Rico',z:'NA'},
+  'KP5':{c:'Desecheo Island',z:'NA'},
+  'VP5':{c:'Turks & Caicos',z:'NA'},
+  'VP9':{c:'Bermuda',z:'NA'},
+  'PJ2':{c:'Curaçao',z:'NA'},
+  'PJ4':{c:'Bonaire',z:'NA'},
+  'PJ5':{c:'Saba & Sint Eustatius',z:'NA'},
+  'PJ7':{c:'Sint Maarten',z:'NA'},
+  'CE9':{c:'Antarctica',z:'AN'},
+  'CE0':{c:'Easter Island',z:'SA'},
+  'VP8':{c:'Falkland Islands',z:'SA'},
+  'HB0':{c:'Liechtenstein',z:'EU'},
+  'UA9':{c:'Russia (Asia)',z:'AS'},
+  'UA0':{c:'Russia (Asia)',z:'AS'},
+  'RA9':{c:'Russia (Asia)',z:'AS'},
+  'RA0':{c:'Russia (Asia)',z:'AS'},
+  'RK9':{c:'Russia (Asia)',z:'AS'},
+  'RK0':{c:'Russia (Asia)',z:'AS'},
+  'EA8':{c:'Canary Islands',z:'AF'},
+  'EA9':{c:'Ceuta & Melilla',z:'AF'},
+  'CT2':{c:'Azores',z:'AF'},
+  'CT3':{c:'Madeira',z:'AF'},
+  'IS0':{c:'Sardinia',z:'EU'},
+  'IT9':{c:'Sicily',z:'EU'},
+  'OH0':{c:'Aland Islands',z:'EU'},
+  'OJ0':{c:'Market Reef',z:'EU'},
+  'LA1':{c:'Bear Island',z:'EU'},
+  'SV5':{c:'Dodecanese',z:'EU'},
+  'SV9':{c:'Crete',z:'EU'},
+  'TA3':{c:'Asiatic Turkey',z:'AS'},
+  'XX9':{c:'Macao',z:'AS'},
+  'JD1':{c:'Ogasawara',z:'OC'},
+  'VK0':{c:'Heard Island',z:'AN'},
+  'VK9':{c:'External Territories',z:'OC'},
+  'ZL7':{c:'Chatham Islands',z:'OC'},
+  'ZL8':{c:'Kermadec Islands',z:'OC'},
+  'ZL9':{c:'Auckland Islands',z:'OC'},
+  'ZK1':{c:'Cook Islands',z:'OC'},
+  'ZK2':{c:'Niue',z:'OC'},
+  'ZK3':{c:'Tokelau',z:'OC'},
+  '3D2':{c:'Fiji',z:'OC'},
+  '3DA':{c:'Eswatini',z:'AF'},
+  'ZD7':{c:'St Helena',z:'AF'},
+  'ZD8':{c:'Ascension Island',z:'AF'},
+  'ZD9':{c:'Tristan da Cunha',z:'AF'},
+  'H44':{c:'Solomon Islands',z:'OC'},
+  'H40':{c:'Temotu',z:'OC'},
+  'RI1':{c:'Antarctica',z:'AN'},
+  'DP0':{c:'Antarctica',z:'AN'},
+  'ST2':{c:'South Sudan',z:'AF'},
+  'VQ9':{c:'Diego Garcia',z:'AF'},
+  '3B6':{c:'Agalega',z:'AF'},
+  '3B7':{c:'St Brandon',z:'AF'},
+  '3B8':{c:'Mauritius',z:'AF'},
+  '3B9':{c:'Rodriguez',z:'AF'},
+  'CR3':{c:'Annobon',z:'AF'},
+  'AA':{c:'United States',z:'NA'},
+  'AB':{c:'United States',z:'NA'},
+  'AC':{c:'United States',z:'NA'},
+  'AD':{c:'United States',z:'NA'},
+  'AE':{c:'United States',z:'NA'},
+  'AF':{c:'United States',z:'NA'},
+  'AG':{c:'United States',z:'NA'},
+  'AI':{c:'United States',z:'NA'},
+  'AJ':{c:'United States',z:'NA'},
+  'AK':{c:'United States',z:'NA'},
+  'WA':{c:'United States',z:'NA'},
+  'WB':{c:'United States',z:'NA'},
+  'WC':{c:'United States',z:'NA'},
+  'WD':{c:'United States',z:'NA'},
+  'WF':{c:'United States',z:'NA'},
+  'WG':{c:'United States',z:'NA'},
+  'WI':{c:'United States',z:'NA'},
+  'WJ':{c:'United States',z:'NA'},
+  'WK':{c:'United States',z:'NA'},
+  'WL':{c:'United States',z:'NA'},
+  'WM':{c:'United States',z:'NA'},
+  'WN':{c:'United States',z:'NA'},
+  'WO':{c:'United States',z:'NA'},
+  'WP':{c:'United States',z:'NA'},
+  'WQ':{c:'United States',z:'NA'},
+  'WR':{c:'United States',z:'NA'},
+  'WS':{c:'United States',z:'NA'},
+  'WT':{c:'United States',z:'NA'},
+  'WU':{c:'United States',z:'NA'},
+  'WV':{c:'United States',z:'NA'},
+  'WW':{c:'United States',z:'NA'},
+  'WX':{c:'United States',z:'NA'},
+  'WY':{c:'United States',z:'NA'},
+  'WZ':{c:'United States',z:'NA'},
+  'VE':{c:'Canada',z:'NA'},
+  'VA':{c:'Canada',z:'NA'},
+  'VB':{c:'Canada',z:'NA'},
+  'VC':{c:'Canada',z:'NA'},
+  'VD':{c:'Canada',z:'NA'},
+  'VF':{c:'Canada',z:'NA'},
+  'VG':{c:'Canada',z:'NA'},
+  'VO':{c:'Canada',z:'NA'},
+  'VY':{c:'Canada',z:'NA'},
+  'XE':{c:'Mexico',z:'NA'},
+  'XF':{c:'Mexico',z:'NA'},
+  'KH':{c:'Hawaii',z:'OC'},
+  'KL':{c:'Alaska',z:'NA'},
+  'KP':{c:'Puerto Rico',z:'NA'},
+  'XH':{c:'Mexico',z:'NA'},
+  'TG':{c:'Guatemala',z:'NA'},
+  'TD':{c:'Guatemala',z:'NA'},
+  'TI':{c:'Costa Rica',z:'NA'},
+  'TE':{c:'Costa Rica',z:'NA'},
+  'HP':{c:'Panama',z:'NA'},
+  'HO':{c:'Panama',z:'NA'},
+  'HQ':{c:'Honduras',z:'NA'},
+  'HR':{c:'Honduras',z:'NA'},
+  'YS':{c:'El Salvador',z:'NA'},
+  'TZ':{c:'Mali',z:'AF'},
+  'V3':{c:'Belize',z:'NA'},
+  'YN':{c:'Nicaragua',z:'NA'},
+  'HH':{c:'Haiti',z:'NA'},
+  'HI':{c:'Dominican Republic',z:'NA'},
+  'CO':{c:'Cuba',z:'NA'},
+  'CM':{c:'Cuba',z:'NA'},
+  'ZF':{c:'Cayman Islands',z:'NA'},
+  'C6':{c:'Bahamas',z:'NA'},
+  '6Y':{c:'Jamaica',z:'NA'},
+  'V2':{c:'Antigua & Barbuda',z:'NA'},
+  'V4':{c:'St Kitts & Nevis',z:'NA'},
+  'J7':{c:'Dominica',z:'NA'},
+  'J6':{c:'St Lucia',z:'NA'},
+  'J8':{c:'St Vincent',z:'NA'},
+  '8P':{c:'Barbados',z:'NA'},
+  '9Y':{c:'Trinidad & Tobago',z:'NA'},
+  '9Z':{c:'Trinidad & Tobago',z:'NA'},
+  'FJ':{c:'Saint Barthelemy',z:'NA'},
+  'FS':{c:'Saint Martin',z:'NA'},
+  'FG':{c:'Guadeloupe',z:'NA'},
+  'FM':{c:'Martinique',z:'NA'},
+  'TO':{c:'Martinique',z:'NA'},
+  'PY':{c:'Brazil',z:'SA'},
+  'PP':{c:'Brazil',z:'SA'},
+  'PQ':{c:'Brazil',z:'SA'},
+  'PR':{c:'Brazil',z:'SA'},
+  'PS':{c:'Brazil',z:'SA'},
+  'PT':{c:'Brazil',z:'SA'},
+  'PU':{c:'Brazil',z:'SA'},
+  'PV':{c:'Brazil',z:'SA'},
+  'PW':{c:'Brazil',z:'SA'},
+  'PX':{c:'Brazil',z:'SA'},
+  'LU':{c:'Argentina',z:'SA'},
+  'LO':{c:'Argentina',z:'SA'},
+  'LP':{c:'Argentina',z:'SA'},
+  'LQ':{c:'Argentina',z:'SA'},
+  'LR':{c:'Argentina',z:'SA'},
+  'LS':{c:'Argentina',z:'SA'},
+  'LT':{c:'Argentina',z:'SA'},
+  'LV':{c:'Argentina',z:'SA'},
+  'LW':{c:'Argentina',z:'SA'},
+  'CE':{c:'Chile',z:'SA'},
+  'CA':{c:'Chile',z:'SA'},
+  'CB':{c:'Chile',z:'SA'},
+  'CC':{c:'Chile',z:'SA'},
+  'CD':{c:'Chile',z:'SA'},
+  'YV':{c:'Venezuela',z:'SA'},
+  'YW':{c:'Venezuela',z:'SA'},
+  'YX':{c:'Venezuela',z:'SA'},
+  'HC':{c:'Ecuador',z:'SA'},
+  'HD':{c:'Ecuador',z:'SA'},
+  'OA':{c:'Peru',z:'SA'},
+  'OB':{c:'Peru',z:'SA'},
+  'OC':{c:'Peru',z:'SA'},
+  'CP':{c:'Bolivia',z:'SA'},
+  'ZP':{c:'Paraguay',z:'SA'},
+  'CX':{c:'Uruguay',z:'SA'},
+  'HK':{c:'Colombia',z:'SA'},
+  'HJ':{c:'Colombia',z:'SA'},
+  'GY':{c:'Guyana',z:'SA'},
+  '8R':{c:'Guyana',z:'SA'},
+  'FY':{c:'French Guiana',z:'SA'},
+  'PZ':{c:'Suriname',z:'SA'},
+  'GD':{c:'Isle of Man',z:'EU'},
+  'GI':{c:'Northern Ireland',z:'EU'},
+  'MI':{c:'Northern Ireland',z:'EU'},
+  'GJ':{c:'Jersey',z:'EU'},
+  'MJ':{c:'Jersey',z:'EU'},
+  'GM':{c:'Scotland',z:'EU'},
+  'MM':{c:'Scotland',z:'EU'},
+  'GU':{c:'Guernsey',z:'EU'},
+  'MU':{c:'Guernsey',z:'EU'},
+  'GW':{c:'Wales',z:'EU'},
+  'MW':{c:'Wales',z:'EU'},
+  'EI':{c:'Ireland',z:'EU'},
+  'EJ':{c:'Ireland',z:'EU'},
+  'DL':{c:'Germany',z:'EU'},
+  'DA':{c:'Germany',z:'EU'},
+  'DB':{c:'Germany',z:'EU'},
+  'DC':{c:'Germany',z:'EU'},
+  'DD':{c:'Germany',z:'EU'},
+  'DE':{c:'Germany',z:'EU'},
+  'DF':{c:'Germany',z:'EU'},
+  'DG':{c:'Germany',z:'EU'},
+  'DH':{c:'Germany',z:'EU'},
+  'DI':{c:'Germany',z:'EU'},
+  'DJ':{c:'Germany',z:'EU'},
+  'DK':{c:'Germany',z:'EU'},
+  'DM':{c:'Germany',z:'EU'},
+  'DO':{c:'Germany',z:'EU'},
+  'DP':{c:'Germany',z:'EU'},
+  'DQ':{c:'Germany',z:'EU'},
+  'DR':{c:'Germany',z:'EU'},
+  'TM':{c:'France',z:'EU'},
+  'ON':{c:'Belgium',z:'EU'},
+  'OO':{c:'Belgium',z:'EU'},
+  'OP':{c:'Belgium',z:'EU'},
+  'OQ':{c:'Belgium',z:'EU'},
+  'OR':{c:'Belgium',z:'EU'},
+  'OS':{c:'Belgium',z:'EU'},
+  'OT':{c:'Belgium',z:'EU'},
+  'PA':{c:'Netherlands',z:'EU'},
+  'PB':{c:'Netherlands',z:'EU'},
+  'PC':{c:'Netherlands',z:'EU'},
+  'PD':{c:'Netherlands',z:'EU'},
+  'PE':{c:'Netherlands',z:'EU'},
+  'PF':{c:'Netherlands',z:'EU'},
+  'PG':{c:'Netherlands',z:'EU'},
+  'PH':{c:'Netherlands',z:'EU'},
+  'PI':{c:'Netherlands',z:'EU'},
+  'SM':{c:'Sweden',z:'EU'},
+  'SA':{c:'Sweden',z:'EU'},
+  'SB':{c:'Sweden',z:'EU'},
+  'SC':{c:'Sweden',z:'EU'},
+  'SD':{c:'Sudan',z:'AF'},
+  'SE':{c:'Sweden',z:'EU'},
+  'SF':{c:'Sweden',z:'EU'},
+  'SG':{c:'Sweden',z:'EU'},
+  'SH':{c:'Sweden',z:'EU'},
+  'SI':{c:'Sweden',z:'EU'},
+  'SJ':{c:'Sweden',z:'EU'},
+  'SK':{c:'Sweden',z:'EU'},
+  'SL':{c:'Sweden',z:'EU'},
+  'LA':{c:'Norway',z:'EU'},
+  'LB':{c:'Norway',z:'EU'},
+  'LC':{c:'Norway',z:'EU'},
+  'LD':{c:'Norway',z:'EU'},
+  'LE':{c:'Norway',z:'EU'},
+  'LF':{c:'Norway',z:'EU'},
+  'LG':{c:'Norway',z:'EU'},
+  'LH':{c:'Norway',z:'EU'},
+  'LI':{c:'Norway',z:'EU'},
+  'LJ':{c:'Norway',z:'EU'},
+  'LK':{c:'Norway',z:'EU'},
+  'LL':{c:'Norway',z:'EU'},
+  'LM':{c:'Norway',z:'EU'},
+  'LN':{c:'Norway',z:'EU'},
+  'OH':{c:'Finland',z:'EU'},
+  'OG':{c:'Finland',z:'EU'},
+  'OF':{c:'Finland',z:'EU'},
+  'OI':{c:'Finland',z:'EU'},
+  'OJ':{c:'Finland',z:'EU'},
+  'OE':{c:'Austria',z:'EU'},
+  'HB':{c:'Switzerland',z:'EU'},
+  'OZ':{c:'Denmark',z:'EU'},
+  'OU':{c:'Denmark',z:'EU'},
+  'OV':{c:'Denmark',z:'EU'},
+  'OW':{c:'Denmark',z:'EU'},
+  'OX':{c:'Greenland',z:'NA'},
+  'TF':{c:'Iceland',z:'EU'},
+  'SP':{c:'Poland',z:'EU'},
+  'SN':{c:'Poland',z:'EU'},
+  'SO':{c:'Poland',z:'EU'},
+  'SQ':{c:'Poland',z:'EU'},
+  'SR':{c:'Poland',z:'EU'},
+  'UA':{c:'Russia',z:'EU'},
+  'RA':{c:'Russia',z:'EU'},
+  'RB':{c:'Russia',z:'EU'},
+  'RC':{c:'Russia',z:'EU'},
+  'RD':{c:'Russia',z:'EU'},
+  'RE':{c:'Russia',z:'EU'},
+  'RF':{c:'Russia',z:'EU'},
+  'RG':{c:'Russia',z:'EU'},
+  'RH':{c:'Russia',z:'EU'},
+  'RI':{c:'Russia',z:'EU'},
+  'RJ':{c:'Russia',z:'EU'},
+  'RK':{c:'Russia',z:'EU'},
+  'RL':{c:'Russia',z:'EU'},
+  'RM':{c:'Russia',z:'EU'},
+  'RN':{c:'Russia',z:'EU'},
+  'RO':{c:'Russia',z:'EU'},
+  'RP':{c:'Russia',z:'EU'},
+  'RQ':{c:'Russia',z:'EU'},
+  'RR':{c:'Russia',z:'EU'},
+  'RS':{c:'Russia',z:'EU'},
+  'RT':{c:'Russia',z:'EU'},
+  'RU':{c:'Russia',z:'EU'},
+  'RV':{c:'Russia',z:'EU'},
+  'RW':{c:'Russia',z:'EU'},
+  'RX':{c:'Russia',z:'EU'},
+  'RY':{c:'Russia',z:'EU'},
+  'RZ':{c:'Russia',z:'EU'},
+  'HA':{c:'Hungary',z:'EU'},
+  'HG':{c:'Hungary',z:'EU'},
+  'OK':{c:'Czech Republic',z:'EU'},
+  'OL':{c:'Czech Republic',z:'EU'},
+  'OM':{c:'Slovakia',z:'EU'},
+  'IK':{c:'Italy',z:'EU'},
+  'IZ':{c:'Italy',z:'EU'},
+  'II':{c:'Italy',z:'EU'},
+  'IW':{c:'Italy',z:'EU'},
+  'IU':{c:'Italy',z:'EU'},
+  'IO':{c:'Italy',z:'EU'},
+  'IP':{c:'Italy',z:'EU'},
+  'EA':{c:'Spain',z:'EU'},
+  'EB':{c:'Spain',z:'EU'},
+  'EC':{c:'Spain',z:'EU'},
+  'ED':{c:'Spain',z:'EU'},
+  'EE':{c:'Spain',z:'EU'},
+  'EF':{c:'Spain',z:'EU'},
+  'EG':{c:'Spain',z:'EU'},
+  'EH':{c:'Spain',z:'EU'},
+  'CT':{c:'Portugal',z:'EU'},
+  'CS':{c:'Portugal',z:'EU'},
+  'CQ':{c:'Portugal',z:'EU'},
+  'CR':{c:'Portugal',z:'EU'},
+  'YO':{c:'Romania',z:'EU'},
+  'YP':{c:'Romania',z:'EU'},
+  'YQ':{c:'Romania',z:'EU'},
+  'YR':{c:'Romania',z:'EU'},
+  'LZ':{c:'Bulgaria',z:'EU'},
+  'S5':{c:'Slovenia',z:'EU'},
+  'T7':{c:'San Marino',z:'EU'},
+  'HV':{c:'Vatican City',z:'EU'},
+  'IS':{c:'Sardinia',z:'EU'},
+  '9A':{c:'Croatia',z:'EU'},
+  'E7':{c:'Bosnia-Herzegovina',z:'EU'},
+  'Z6':{c:'Kosovo',z:'EU'},
+  'YU':{c:'Serbia',z:'EU'},
+  'YT':{c:'Serbia',z:'EU'},
+  '4N':{c:'Serbia',z:'EU'},
+  'Z3':{c:'North Macedonia',z:'EU'},
+  'LY':{c:'Lithuania',z:'EU'},
+  'YL':{c:'Latvia',z:'EU'},
+  'ES':{c:'Estonia',z:'EU'},
+  'JW':{c:'Svalbard',z:'EU'},
+  'JX':{c:'Jan Mayen',z:'EU'},
+  'SV':{c:'Greece',z:'EU'},
+  'SY':{c:'Greece',z:'EU'},
+  'SX':{c:'Greece',z:'EU'},
+  'SZ':{c:'Greece',z:'EU'},
+  'ZA':{c:'Albania',z:'EU'},
+  'TA':{c:'Turkey',z:'AS'},
+  'TB':{c:'Turkey',z:'AS'},
+  'TC':{c:'Turkey',z:'AS'},
+  'YM':{c:'Turkey',z:'AS'},
+  '4X':{c:'Israel',z:'AS'},
+  '4Z':{c:'Israel',z:'AS'},
+  'OD':{c:'Lebanon',z:'AS'},
+  'YK':{c:'Syria',z:'AS'},
+  'JY':{c:'Jordan',z:'AS'},
+  'HZ':{c:'Saudi Arabia',z:'AS'},
+  '7Z':{c:'Saudi Arabia',z:'AS'},
+  'A4':{c:'Oman',z:'AS'},
+  'A7':{c:'Qatar',z:'AS'},
+  'A6':{c:'UAE',z:'AS'},
+  'A9':{c:'Bahrain',z:'AS'},
+  '9K':{c:'Kuwait',z:'AS'},
+  'YI':{c:'Iraq',z:'AS'},
+  'EP':{c:'Iran',z:'AS'},
+  'EO':{c:'Iran',z:'AS'},
+  'AP':{c:'Pakistan',z:'AS'},
+  '6P':{c:'Pakistan',z:'AS'},
+  'VU':{c:'India',z:'AS'},
+  'AT':{c:'India',z:'AS'},
+  'AU':{c:'India',z:'AS'},
+  'AV':{c:'India',z:'AS'},
+  'AW':{c:'India',z:'AS'},
+  '8T':{c:'India',z:'AS'},
+  'S2':{c:'Bangladesh',z:'AS'},
+  'S3':{c:'Bangladesh',z:'AS'},
+  '9N':{c:'Nepal',z:'AS'},
+  '4S':{c:'Sri Lanka',z:'AS'},
+  'A5':{c:'Bhutan',z:'AS'},
+  'XU':{c:'Cambodia',z:'AS'},
+  'XW':{c:'Laos',z:'AS'},
+  'XV':{c:'Vietnam',z:'AS'},
+  '3W':{c:'Vietnam',z:'AS'},
+  'HS':{c:'Thailand',z:'AS'},
+  'E2':{c:'Thailand',z:'AS'},
+  'XY':{c:'Myanmar',z:'AS'},
+  'XZ':{c:'Myanmar',z:'AS'},
+  'DU':{c:'Philippines',z:'OC'},
+  '4D':{c:'Philippines',z:'OC'},
+  '4E':{c:'Philippines',z:'OC'},
+  'BY':{c:'China',z:'AS'},
+  'BA':{c:'China',z:'AS'},
+  'BB':{c:'China',z:'AS'},
+  'BC':{c:'China',z:'AS'},
+  'BD':{c:'China',z:'AS'},
+  'BG':{c:'China',z:'AS'},
+  'BH':{c:'China',z:'AS'},
+  'BI':{c:'China',z:'AS'},
+  'BJ':{c:'China',z:'AS'},
+  'BL':{c:'China',z:'AS'},
+  'BM':{c:'China',z:'AS'},
+  'BN':{c:'China',z:'AS'},
+  'BO':{c:'China',z:'AS'},
+  'BP':{c:'China',z:'AS'},
+  'BQ':{c:'China',z:'AS'},
+  'BR':{c:'China',z:'AS'},
+  'BS':{c:'China',z:'AS'},
+  'BT':{c:'China',z:'AS'},
+  'BU':{c:'China',z:'AS'},
+  'BV':{c:'Taiwan',z:'AS'},
+  'BW':{c:'China',z:'AS'},
+  'BX':{c:'China',z:'AS'},
+  'VR':{c:'Hong Kong',z:'AS'},
+  'JA':{c:'Japan',z:'AS'},
+  'JB':{c:'Japan',z:'AS'},
+  'JC':{c:'Japan',z:'AS'},
+  'JD':{c:'Japan',z:'AS'},
+  'JE':{c:'Japan',z:'AS'},
+  'JF':{c:'Japan',z:'AS'},
+  'JG':{c:'Japan',z:'AS'},
+  'JH':{c:'Japan',z:'AS'},
+  'JI':{c:'Japan',z:'AS'},
+  'JJ':{c:'Japan',z:'AS'},
+  'JK':{c:'Japan',z:'AS'},
+  'JL':{c:'Japan',z:'AS'},
+  'JM':{c:'Japan',z:'AS'},
+  'JN':{c:'Japan',z:'AS'},
+  'JO':{c:'Japan',z:'AS'},
+  'JP':{c:'Japan',z:'AS'},
+  'JQ':{c:'Japan',z:'AS'},
+  'JR':{c:'Japan',z:'AS'},
+  'JS':{c:'Japan',z:'AS'},
+  'HL':{c:'South Korea',z:'AS'},
+  'DS':{c:'South Korea',z:'AS'},
+  'DT':{c:'South Korea',z:'AS'},
+  'P5':{c:'North Korea',z:'AS'},
+  'VK':{c:'Australia',z:'OC'},
+  'AX':{c:'Australia',z:'OC'},
+  'ZL':{c:'New Zealand',z:'OC'},
+  'ZK':{c:'New Zealand',z:'OC'},
+  'ZM':{c:'New Zealand',z:'OC'},
+  'YB':{c:'Indonesia',z:'OC'},
+  'YC':{c:'Indonesia',z:'OC'},
+  'YD':{c:'Indonesia',z:'OC'},
+  'YE':{c:'Indonesia',z:'OC'},
+  'YF':{c:'Indonesia',z:'OC'},
+  'YG':{c:'Indonesia',z:'OC'},
+  'YH':{c:'Indonesia',z:'OC'},
+  'PK':{c:'Indonesia',z:'OC'},
+  'PL':{c:'Indonesia',z:'OC'},
+  'PM':{c:'Indonesia',z:'OC'},
+  'PN':{c:'Indonesia',z:'OC'},
+  'PO':{c:'Indonesia',z:'OC'},
+  '9M':{c:'Malaysia',z:'AS'},
+  '9W':{c:'Malaysia',z:'AS'},
+  'V8':{c:'Brunei',z:'OC'},
+  'T8':{c:'Palau',z:'OC'},
+  'V6':{c:'Micronesia',z:'OC'},
+  'V7':{c:'Marshall Islands',z:'OC'},
+  'C2':{c:'Nauru',z:'OC'},
+  'T2':{c:'Tuvalu',z:'OC'},
+  'A3':{c:'Tonga',z:'OC'},
+  'E5':{c:'Cook Islands',z:'OC'},
+  '5W':{c:'Samoa',z:'OC'},
+  'YJ':{c:'Vanuatu',z:'OC'},
+  'H4':{c:'Solomon Islands',z:'OC'},
+  'P2':{c:'Papua New Guinea',z:'OC'},
+  'FW':{c:'Wallis & Futuna',z:'OC'},
+  'FK':{c:'New Caledonia',z:'OC'},
+  'FO':{c:'French Polynesia',z:'OC'},
+  '1A':{c:'SMOM',z:'EU'},
+  'ZS':{c:'South Africa',z:'AF'},
+  'ZT':{c:'South Africa',z:'AF'},
+  'ZU':{c:'South Africa',z:'AF'},
+  'ZR':{c:'South Africa',z:'AF'},
+  '7P':{c:'Lesotho',z:'AF'},
+  'V5':{c:'Namibia',z:'AF'},
+  'A2':{c:'Botswana',z:'AF'},
+  'Z2':{c:'Zimbabwe',z:'AF'},
+  'ZW':{c:'Zimbabwe',z:'AF'},
+  '9J':{c:'Zambia',z:'AF'},
+  '7Q':{c:'Malawi',z:'AF'},
+  'C9':{c:'Mozambique',z:'AF'},
+  'ZB':{c:'Gibraltar',z:'EU'},
+  'TJ':{c:'Cameroon',z:'AF'},
+  'TL':{c:'Central African Republic',z:'AF'},
+  'TN':{c:'Republic of Congo',z:'AF'},
+  'TR':{c:'Gabon',z:'AF'},
+  'TT':{c:'Chad',z:'AF'},
+  'TU':{c:'Ivory Coast',z:'AF'},
+  'J2':{c:'Djibouti',z:'AF'},
+  'J3':{c:'Grenada',z:'NA'},
+  'EL':{c:'Liberia',z:'AF'},
+  '5N':{c:'Nigeria',z:'AF'},
+  '5O':{c:'Nigeria',z:'AF'},
+  '5U':{c:'Niger',z:'AF'},
+  '5H':{c:'Tanzania',z:'AF'},
+  '5I':{c:'Tanzania',z:'AF'},
+  '5X':{c:'Uganda',z:'AF'},
+  '5Z':{c:'Kenya',z:'AF'},
+  '6W':{c:'Senegal',z:'AF'},
+  '6V':{c:'Senegal',z:'AF'},
+  '7X':{c:'Algeria',z:'AF'},
+  '9G':{c:'Ghana',z:'AF'},
+  '9L':{c:'Sierra Leone',z:'AF'},
+  '9Q':{c:'DR Congo',z:'AF'},
+  '9S':{c:'DR Congo',z:'AF'},
+  '9U':{c:'Burundi',z:'AF'},
+  '9X':{c:'Rwanda',z:'AF'},
+  'C5':{c:'Gambia',z:'AF'},
+  'D4':{c:'Cape Verde',z:'AF'},
+  'D6':{c:'Comoros',z:'AF'},
+  'E4':{c:'Palestine',z:'AS'},
+  'EK':{c:'Armenia',z:'AS'},
+  'ER':{c:'Moldova',z:'EU'},
+  'ET':{c:'Ethiopia',z:'AF'},
+  'EX':{c:'Kyrgyzstan',z:'AS'},
+  'EY':{c:'Tajikistan',z:'AS'},
+  'EZ':{c:'Turkmenistan',z:'AS'},
+  'JT':{c:'Mongolia',z:'AS'},
+  'UN':{c:'Kazakhstan',z:'AS'},
+  'UO':{c:'Kazakhstan',z:'AS'},
+  'UP':{c:'Kazakhstan',z:'AS'},
+  'UQ':{c:'Kazakhstan',z:'AS'},
+  'UR':{c:'Ukraine',z:'EU'},
+  'US':{c:'Ukraine',z:'EU'},
+  'UT':{c:'Ukraine',z:'EU'},
+  'UU':{c:'Ukraine',z:'EU'},
+  'UV':{c:'Ukraine',z:'EU'},
+  'UW':{c:'Ukraine',z:'EU'},
+  'UX':{c:'Ukraine',z:'EU'},
+  'UY':{c:'Ukraine',z:'EU'},
+  'UZ':{c:'Ukraine',z:'EU'},
+  'UK':{c:'Uzbekistan',z:'AS'},
+  'UJ':{c:'Uzbekistan',z:'AS'},
+  'EW':{c:'Belarus',z:'EU'},
+  'UB':{c:'Ukraine',z:'EU'},
+  'UC':{c:'Ukraine',z:'EU'},
+  'UD':{c:'Ukraine',z:'EU'},
+  'UE':{c:'Ukraine',z:'EU'},
+  'UF':{c:'Georgia',z:'AS'},
+  '4L':{c:'Georgia',z:'AS'},
+  'UG':{c:'Georgia',z:'AS'},
+  'UI':{c:'Uzbekistan',z:'AS'},
+  'GE':{c:'Georgia',z:'AS'},
+  'UH':{c:'Turkmenistan',z:'AS'},
+  '4K':{c:'Azerbaijan',z:'AS'},
+  'A0':{c:'ITU',z:'EU'},
+  'ST':{c:'Sudan',z:'AF'},
+  '6T':{c:'Sudan',z:'AF'},
+  'SU':{c:'Egypt',z:'AF'},
+  'S7':{c:'Seychelles',z:'AF'},
+  'S9':{c:'Sao Tome & Principe',z:'AF'},
+  'FR':{c:'Reunion',z:'AF'},
+  'D2':{c:'Angola',z:'AF'},
+  'TY':{c:'Benin',z:'AF'},
+  'XT':{c:'Burkina Faso',z:'AF'},
+  'T5':{c:'Somalia',z:'AF'},
+  '6O':{c:'Somalia',z:'AF'},
+  'C3':{c:'Andorra',z:'EU'},
+  'LX':{c:'Luxembourg',z:'EU'},
+  'OY':{c:'Faroe Islands',z:'EU'},
+  '3V':{c:'Tunisia',z:'AF'},
+  'TS':{c:'Tunisia',z:'AF'},
+  '5A':{c:'Libya',z:'AF'},
+  'CN':{c:'Morocco',z:'AF'},
+  'C8':{c:'Mozambique',z:'AF'},
+  'K':{c:'United States',z:'NA'},
+  'W':{c:'United States',z:'NA'},
+  'N':{c:'United States',z:'NA'},
+  'G':{c:'England',z:'EU'},
+  'M':{c:'England',z:'EU'},
+  'F':{c:'France',z:'EU'},
+  'I':{c:'Italy',z:'EU'}
+};
+
+function lookupDXCC(call) {
+  if (!call || call.length < 2) return null;
+  const c = call.toUpperCase()
+    .replace(/\/(P|M|MM|AM|QRP)$/i, '') // strip portable suffixes
+    .split('/');
+  // If portable suffix present and looks like a prefix, try it first
+  if (c.length > 1 && c[1].length <= 4) {
+    const sfx = c[1].toUpperCase();
+    for (let n = Math.min(sfx.length, 4); n >= 1; n--) {
+      const p = sfx.slice(0, n);
+      if (DXCC[p]) return DXCC[p];
+    }
+  }
+  const base = c[0].toUpperCase();
+  // Try longest prefix first, down to 1 char
+  for (let n = Math.min(base.length, 5); n >= 1; n--) {
+    const p = base.slice(0, n);
+    if (DXCC[p]) return DXCC[p];
+  }
+  return null;
+}
+
+function updateDXInfo(call) {
+  const countryEl = document.getElementById('dxinfo-country');
+  const contEl    = document.getElementById('dxinfo-cont');
+  if (!call || call.length < 2) {
+    countryEl.textContent = '';
+    contEl.textContent    = '';
+    contEl.className      = 'dxinfo-cont ??';
+    return;
+  }
+  const info = lookupDXCC(call);
+  if (info) {
+    countryEl.textContent = info.c;
+    contEl.textContent    = info.z;
+    contEl.className      = 'dxinfo-cont ' + info.z;
+  } else {
+    countryEl.textContent = '';
+    contEl.textContent    = '?';
+    contEl.className      = 'dxinfo-cont ??';
+  }
+}
+
+function renderLog() {
+  const el  = document.getElementById('qsolog');
+  const rev = [...qsos].reverse();
+  el.innerHTML = rev.map(q => {
+    let cls = 'lr';
+    if (q.mode === 'CW')  cls += ' cw';
+    if (q.mode === 'FT8') cls += ' ft';
+    if (q.dupe_flag)      cls += ' dp';
+    return `<div class="${cls}" onclick="openEdit('${q.id}')">
+      <span>${q.seq || ''}</span>
+      <span class="lc">${q.callsign}</span>
+      <span>${(q.logged_at || '').slice(11,16)}</span>
+      <span>${q.rst_sent || ''}</span>
+      <span>${q.rst_rcvd || ''}</span>
+      <span>${q.band || ''}</span>
+      <span>${q.mode || ''}</span>
+      <span class="lop">${q.operator || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderBands() {
+  // Count by band and by band+mode
+  const cnt = {}, byMode = {};
+  qsos.filter(q => !q.dupe_flag).forEach(q => {
+    cnt[q.band] = (cnt[q.band] || 0) + 1;
+    const k = q.band + '|' + q.mode;
+    byMode[k] = (byMode[k] || 0) + 1;
+  });
+  const maxC = Math.max(...Object.values(cnt), 1);
+  document.getElementById('bandsumm').innerHTML = BANDS.map(b => {
+    const c   = cnt[b] || 0;
+    const w   = Math.round(c / maxC * 100);
+    const ssb = byMode[b+'|SSB'] || 0;
+    const cw  = byMode[b+'|CW']  || 0;
+    const ft8 = byMode[b+'|FT8'] || 0;
+    const pills = [
+      ssb ? `<span class="bmode-pill ssb">SSB ${ssb}</span>` : '',
+      cw  ? `<span class="bmode-pill cw">CW ${cw}</span>`   : '',
+      ft8 ? `<span class="bmode-pill ft8">FT8 ${ft8}</span>` : '',
+    ].filter(Boolean).join('');
+    return `<div class="brow${b === currentBand ? ' bact' : ''}">
+      <div class="brow-top">
+        <div class="bname">${b}</div>
+        <div class="bbarw"><div class="bbar${c > 0 ? ' has' : ''}" style="width:${w}%"></div></div>
+        <div class="bcnt">${c || ''}</div>
+      </div>
+      ${pills ? `<div class="brow-modes">${pills}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderPeerList(peers) {
+  // Show peers (other stations on the network) in the network bar
+  // alongside local browser sessions
+  const netbar = document.getElementById('stationlist');
+  if (!netbar) return;
+  // Merge: local browser sessions + network peers
+  // Network bar shows: local sessions (from STATION_LIST) + remote peers (from PEER_LIST_UPDATE)
+  // Store peers for rebuildNetBar to use
+  latestPeers = peers;
+  rebuildNetBar();
+}
+
+function rebuildNetBar() {
+  // Deduplicate by callsign — if multiple sessions share a callsign, show only
+  // the online one (or the [me] one). This prevents triplicate entries.
+  const seen = new Map(); // callsign -> best entry {sid, info}
+  for (const [sid, info] of stationCallsigns) {
+    const call = info.callsign || sid;
+    const existing = seen.get(call);
+    if (!existing) { seen.set(call, { sid, info }); continue; }
+    // Prefer: me > online > any
+    const meWins = sid === sessionId;
+    const existingIsMe = existing.sid === sessionId;
+    if (meWins && !existingIsMe) { seen.set(call, { sid, info }); continue; }
+    if (!existingIsMe && info.online && !existing.info.online) { seen.set(call, { sid, info }); }
+  }
+
+  // Local browser sessions
+  const localEntries = [...seen.values()].map(({ sid, info }) => {
+    const dot  = info.online ? 'up' : 'dw';
+    const isMe = sid === sessionId;
+    const nm   = isMe ? 'nname me' : 'nname';
+    const suf  = isMe ? ' [me]' : (' [' + (info.operatorId || info.stationId || 'OP') + ']');
+    // Show operator callsign (currentOp) not station DX callsign
+    const displayName = info.callsign || info.operatorId || sid;
+    return '<div class="nn"><div class="ndot ' + dot + '"></div><div class="' + nm + '">' + displayName + suf + '</div></div>';
+  });
+
+  // Remote peers from peer mesh
+  const remoteEntries = (latestPeers || []).filter(p => !p.isSelf).map(p => {
+    const dot = p.online ? 'up' : 'dw';
+    return '<div class="nn"><div class="ndot ' + dot + '"></div><div class="nname peer-node">' + (p.callsign || p.operatorId) + ' [' + p.operatorId + ']</div></div>';
+  });
+
+  document.getElementById('stationlist').innerHTML = [...localEntries, ...remoteEntries].join('');
+}
+
+function renderStations(list) {
+  const activeIds = new Set((list || []).map(s => s.id));
+  // Update entries for currently connected stations
+  (list || []).forEach(s => {
+    stationCallsigns.set(s.id, {
+      callsign:   s.callsign || s.operatorId || s.id,
+      operatorId: s.operatorId || s.id,
+      stationId:  s.id,
+      isMaster:   s.isMaster || false,
+      online:     s.online,
+    });
+  });
+  // Remove entries that are no longer connected
+  stationCallsigns.forEach((info, sid) => {
+    if (!activeIds.has(sid)) stationCallsigns.delete(sid);
+  });
+  rebuildNetBar();
+}
+
+function updateUSBIndicator() {
+  const sb = document.getElementById('sb-usb');
+  if (!sb) return;
+  if (!usbStatus.enabled) {
+    sb.innerHTML = 'USB Backup:<span style="color:#9ca3af">disabled</span>';
+    return;
+  }
+  if (usbStatus.hasUSB) {
+    const driveName = (usbStatus.backupPath || usbStatus.drives?.[0] || '').split('/').pop() || 'USB';
+    sb.innerHTML = 'USB:<span style="color:#16a34a">&#x2713; ' + driveName + '</span>';
+  } else {
+    sb.innerHTML = 'USB:<span style="color:#dc2626">no drive</span>';
+  }
+}
+
+function forceUSBBackup() {
+  fetch('/api/usb-backup-now', { method:'POST' })
+    .then(r => r.json())
+    .then(d => {
+      usbStatus = d.usbStatus || {};
+      updateUSBIndicator();
+      addMsg('SYS', 'Manual backup triggered', 'ok');
+    })
+    .catch(() => addMsg('SYS', 'Backup failed — check USB drive', 'er'));
+}
+
+function updateRoleIndicators() {
+  // In peer mesh topology everyone is equal — just show station ID
+  const badge = document.getElementById('badge');
+  const existingRole = document.getElementById('role-badge');
+  if (existingRole) existingRole.remove();
+  if (stationId) {
+    const rb = document.createElement('span');
+    rb.id = 'role-badge';
+    rb.textContent = stationId;
+    rb.style.cssText = 'font-size:10px;font-weight:700;background:#2d5a8e;color:#e0f0ff;border-radius:3px;padding:1px 7px;margin-left:8px;letter-spacing:1px';
+    badge.appendChild(rb);
+  }
+}
+
+function updateStats() {
+  const now  = Date.now();
+  const myOp = currentOp || stationId || 'OP1';
+
+  function callPrefix(call) {
+    if (!call) return '';
+    const c = call.split('/')[0];
+    const m = c.match(/^(\d[A-Z]+\d?|[A-Z]+\d?)/);
+    return m ? m[0].replace(/\d+$/, '') : c.slice(0, 2);
+  }
+
+  // ── Team stats (all operators) ────────────────────────────────
+  const mults    = new Set(qsos.filter(q => !q.dupe_flag).map(q => callPrefix(q.callsign))).size;
+  const team60   = recentTimes.filter(t => now - t < 3600000).length;
+  const team10   = recentTimes.filter(t => now - t < 600000).length * 6;
+  if (team60 > bestHr) { bestHr = team60; saveState('bestHr', bestHr); }
+
+  document.getElementById('tv-q').textContent   = qsos.length;
+  document.getElementById('tv-m').textContent   = mults;
+  document.getElementById('tv-d').textContent   = qsos.filter(q => q.dupe_flag).length;
+  document.getElementById('tv-r').textContent   = team60;
+  document.getElementById('t-q').textContent    = qsos.filter(q => !q.dupe_flag).length;
+  document.getElementById('t-10').textContent   = team10;
+  document.getElementById('t-60').textContent   = team60;
+  document.getElementById('t-best').textContent = bestHr;
+
+  // ── Local stats (this operator only) ─────────────────────────
+  const myQsos  = qsos.filter(q => q.operator === myOp && !q.dupe_flag);
+  const myTimes = myQsos.map(q => new Date(q.logged_at).getTime());
+  const my10    = myTimes.filter(t => now - t < 600000).length * 6;
+  const my60    = myTimes.filter(t => now - t < 3600000).length;
+  if (my60 > myBestHr) { myBestHr = my60; saveState('myBestHr', myBestHr); }
+
+  document.getElementById('l-q').textContent    = myQsos.length;
+  document.getElementById('l-10').textContent   = my10;
+  document.getElementById('l-60').textContent   = my60;
+  document.getElementById('l-best').textContent = myBestHr;
+
+  const sbLocal = document.getElementById('sb-local');
+  if (sbLocal) sbLocal.textContent = localQsos.length + ' QSOs';
+}
+
+function updateStatsFrom(s) {
+  if (s.total !== undefined) document.getElementById('tv-q').textContent = s.total;
+  if (s.dupes !== undefined) document.getElementById('tv-d').textContent = s.dupes;
+}
+
+// ── Super Check Partial database ──────────────────────────────────────────────
+let scpDb      = [];        // full array of callsigns from MASTER.SCP
+let scpLoaded  = false;
+let scpCount   = 0;
+
+let scpRetryTimer = null;
+async function loadSCP(attempt) {
+  attempt = attempt || 1;
+  const panel = document.getElementById('supercheck');
+  try {
+    const r = await fetch('/api/scp');
+    if (!r.ok) {
+      // Server still downloading MASTER.SCP — retry with backoff (max 10 tries)
+      const delay = Math.min(attempt * 5000, 30000);
+      console.warn('[SCP] Not ready (attempt ' + attempt + '), retrying in ' + (delay/1000) + 's');
+      const sb = document.getElementById('sb-scp');
+      if (sb) sb.textContent = 'SCP: fetching...';
+      clearTimeout(scpRetryTimer);
+      scpRetryTimer = setTimeout(() => loadSCP(attempt + 1), delay);
+      return;
+    }
+    const text = await r.text();
+    scpDb = text.split('\n')
+      .map(l => l.trim().toUpperCase())
+      .filter(l => l && !l.startsWith('#') && !l.startsWith(';'));
+    scpCount  = scpDb.length;
+    scpLoaded = true;
+    console.log('[SCP] Loaded ' + scpCount.toLocaleString() + ' callsigns');
+    const el = document.getElementById('scp-count');
+    if (el) el.textContent = (scpCount / 1000).toFixed(0) + 'k callsigns';
+    const sb = document.getElementById('sb-scp');
+    if (sb) sb.textContent = 'SCP: ' + (scpCount / 1000).toFixed(0) + 'k';
+    // Re-run the current callsign through SCP in case user already typed something
+    const callIn = document.getElementById('callIn');
+    if (callIn && callIn.value.trim().length >= 2) renderSupercheck(callIn.value.trim().toUpperCase());
+  } catch(e) {
+    console.warn('[SCP] Load failed:', e.message);
+    const delay = Math.min(attempt * 5000, 30000);
+    clearTimeout(scpRetryTimer);
+    scpRetryTimer = setTimeout(() => loadSCP(attempt + 1), delay);
+  }
+}
+
+function renderSupercheck(partial) {
+  const panel = document.getElementById('supercheck');
+  if (!partial || partial.length < 2) { panel.classList.remove('active'); return; }
+  if (!scpLoaded || scpDb.length === 0) { panel.classList.remove('active'); return; }
+
+  const up = partial.toUpperCase();
+
+  // Fast prefix filter first (most common use), then contains
+  // Prefix matches shown first, then any-position matches
+  const prefixMatches   = [];
+  const containsMatches = [];
+  for (let i = 0; i < scpDb.length; i++) {
+    const c = scpDb[i];
+    if (c.startsWith(up))      prefixMatches.push(c);
+    else if (c.includes(up))   containsMatches.push(c);
+    if (prefixMatches.length + containsMatches.length >= 200) break; // cap search early
+  }
+
+  const allMatches = [...prefixMatches, ...containsMatches];
+  const totalCount = allMatches.length;
+  if (totalCount === 0) { panel.classList.remove('active'); return; }
+
+  // Show up to 20 results
+  const display = allMatches.slice(0, 20);
+
+  panel.classList.add('active');
+
+  // Build worked-callsign set for dupe highlighting
+  const workedOnBandMode = new Set(
+    qsos.filter(q => q.band === currentBand && q.mode === mode && !q.dupe_flag)
+        .map(q => q.callsign)
+  );
+  const workedEver = new Set(qsos.map(q => q.callsign));
+
+  panel.innerHTML =
+    '<div class="sc-title">SCP <span class="sc-match-count">' +
+      totalCount.toLocaleString() + ' match' + (totalCount !== 1 ? 'es' : '') +
+    '</span></div>' +
+    display.map(call => {
+      const idx  = call.indexOf(up);
+      const hi   = call.slice(0, idx)
+                 + '<span class="sc-hi">' + call.slice(idx, idx + up.length) + '</span>'
+                 + call.slice(idx + up.length);
+      const dupe = workedOnBandMode.has(call);
+      const worked = !dupe && workedEver.has(call);
+      return '<div class="sc-row" data-call="' + call + '">' +
+        '<span class="sc-call">' + hi + '</span>' +
+        (dupe   ? '<span class="sc-worked">DUPE</span>' : '') +
+        (worked ? '<span class="sc-prev">prev</span>'   : '') +
+        '</div>';
+    }).join('');
+
+  panel.querySelectorAll('.sc-row').forEach(row => {
+    row.addEventListener('click', () => fillFromSupercheck(row.dataset.call));
+  });
+}
+
+function fillFromSupercheck(call) {
+  document.getElementById('callIn').value = call;
+  checkEntry();
+  document.getElementById('callIn').focus();
+}
+
+function renderAll() { renderLog(); renderBands(); updateStats(); }
+
+// ── Message log ────────────────────────────────────────────────────────────────
+function addMsg(src, txt, type = '') {
+  const el = document.getElementById('msglog');
+  const d  = document.createElement('div');
+  d.className = 'ml ' + type;
+  d.innerHTML = `<span class="ms">[${src}]</span>${txt}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  if (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+// ── Achievement / Encouragement Banner ────────────────────────────────────────
+let bannerTimer = null;
+function showBanner(icon, title, sub, isEncourage, durationMs) {
+  const el = document.getElementById('achievement-banner');
+  document.getElementById('ach-icon').textContent  = icon;
+  document.getElementById('ach-title').textContent = title;
+  document.getElementById('ach-sub').textContent   = sub;
+  el.classList.toggle('encourage', !!isEncourage);
+  el.classList.add('show');
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(dismissBanner, durationMs || 8000);
+}
+function dismissBanner() {
+  document.getElementById('achievement-banner').classList.remove('show');
+  clearTimeout(bannerTimer);
+}
+
+function show5BDXCCBanner() {
+  // Dismiss any smaller banner that might be showing
+  dismissBanner();
+  document.getElementById('fiveband-overlay').classList.add('show');
+}
+function dismiss5BDXCC() {
+  document.getElementById('fiveband-overlay').classList.remove('show');
+}
+
+// Track which DXCC milestones have been displayed so we don't repeat
+// Achievement localStorage key is versioned so changing the threshold clears old entries
+const ACH_STORE_KEY = 'tl_achievements_v2';
+const shownAchievements = new Set(
+  JSON.parse(localStorage.getItem(ACH_STORE_KEY) || '[]')
+);
+function markAchievement(key) {
+  shownAchievements.add(key);
+  localStorage.setItem(ACH_STORE_KEY, JSON.stringify([...shownAchievements]));
+}
+
+// Called when server broadcasts an achievement OR from local check
+function handleAchievement(msg) {
+  if (msg.achievementType === 'DXCC100_BAND' && msg.band) {
+    const key = 'dxcc100_' + msg.band;
+    if (shownAchievements.has(key)) return;
+    markAchievement(key);
+    showBanner('\uD83C\uDFC6',
+      msg.count + ' DXCC on ' + msg.band + '!',
+      msg.count + ' unique DXCC entities worked on ' + msg.band + ' — well done team!',
+      false, 12000);
+    addQSTMsg('SYS', '\uD83C\uDFC6 ' + msg.count + ' DXCC on ' + msg.band + '!', false, new Date().toISOString());
+    addMsg('SYS', msg.count + ' DXCC on ' + msg.band + '!', 'ok');
+  } else if (msg.achievementType === '5BDXCC') {
+    const key = '5bdxcc';
+    if (shownAchievements.has(key)) return;
+    markAchievement(key);
+    show5BDXCCBanner();
+    addQSTMsg('SYS', '\uD83C\uDF1F 5BDXCC ACHIEVED — ' + msg.count + ' DXCC on 80/40/20/15/10M!', false, new Date().toISOString());
+    addMsg('SYS', '5BDXCC ACHIEVED!', 'ok');
+  }
+}
+
+// Rate-drop encouragement
+const ENCOURAGE_MSGS = [
+  ['\u26A1', 'Keep pushing!', 'Rates are higher when the team is focused — dig in!'],
+  ['\uD83D\uDCE1', 'DX is calling!', 'Slow the search, work the pile — every QSO counts.'],
+  ['\uD83C\uDFAF', 'Stay sharp!', 'A consistent 60/hr beat out spikes every time.'],
+  ['\uD83D\uDCAA', 'Dig deeper!', 'Try a new band or mode — there\'s always more DX.'],
+  ['\uD83D\uDD25', 'Light it up!', 'Push those rates — the log doesn\'t fill itself!'],
+  ['\uD83C\uDF0D', 'Work the world!', 'Every country you add is someone\'s new one too.'],
+  ['\u23F1', 'Time is log time!', 'The pileup won\'t wait — stay in the chair!'],
+  ['\uD83D\uDCCA', 'Rate check!', 'Numbers are slipping — let\'s turn that around.'],
+];
+let lastRateEncourage = 0;
+let lastHourRate = null;
+function checkRateDrop() {
+  const now = Date.now();
+  const r60 = qsos.filter(q => now - new Date(q.logged_at) < 3600000).length;
+  const r30projected = qsos.filter(q => now - new Date(q.logged_at) < 1800000).length * 2;
+  if (lastHourRate !== null && r60 > 10 && r30projected < lastHourRate * 0.8) {
+    // Rate has dropped >20% — show encouragement (max once per 10 minutes)
+    if (now - lastRateEncourage > 600000) {
+      lastRateEncourage = now;
+      const m = ENCOURAGE_MSGS[Math.floor(Math.random() * ENCOURAGE_MSGS.length)];
+      showBanner(m[0], m[1], m[2], true, 7000);
+    }
+  }
+  lastHourRate = r60;
+}
+
+// ── Clock ──────────────────────────────────────────────────────────────────────
+// ── NTP sync check ────────────────────────────────────────────────────────────
+// Strategy: measure round-trip time to /api/time, estimate offset.
+// Thresholds: green <1s, amber 1–5s, red >5s (ham radio needs sub-second accuracy).
+let ntpOffset = null;  // ms — positive = browser ahead of server
+
+async function checkNTP() {
+  const dot = document.getElementById('ntpdot');
+  const lbl = document.getElementById('ntplbl');
+  dot.className = 'checking';
+  lbl.className = '';
+  lbl.textContent = 'NTP';
+  document.getElementById('ntpwrap').title = 'Checking…';
+
+  try {
+    // Take 3 samples and use the one with shortest round-trip (minimises network jitter)
+    const samples = [];
+    for (let i = 0; i < 3; i++) {
+      const t0 = Date.now();
+      const r  = await fetch('/api/time?_=' + t0);
+      const t2 = Date.now();
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const { serverTime } = await r.json();
+      const rtt    = t2 - t0;
+      const offset = ((t0 + t2) / 2) - serverTime;  // browser - server (ms)
+      samples.push({ offset, rtt });
+      if (i < 2) await new Promise(res => setTimeout(res, 150));
+    }
+    // Pick sample with shortest RTT
+    samples.sort((a, b) => a.rtt - b.rtt);
+    const best   = samples[0];
+    ntpOffset    = best.offset;
+    const absOff = Math.abs(ntpOffset);
+    const offStr = (absOff < 1000)
+      ? Math.round(absOff) + 'ms'
+      : (absOff / 1000).toFixed(1) + 's';
+    const sign = ntpOffset > 0 ? '+' : '';
+
+    let cls, tip;
+    if (absOff < 1000) {
+      cls = 'ok';
+      tip = `NTP sync good — clock offset ${sign}${offStr} (RTT ${best.rtt}ms)`;
+    } else if (absOff < 5000) {
+      cls = 'warn';
+      tip = `NTP sync warning — clock offset ${sign}${offStr}. Consider syncing your system clock.`;
+    } else {
+      cls = 'bad';
+      tip = `NTP sync poor — clock offset ${sign}${offStr}! This will affect QSO timestamps. Sync your system clock now.`;
+    }
+
+    dot.className = cls;
+    lbl.className = cls;
+    lbl.textContent = offStr;
+    document.getElementById('ntpwrap').title = tip;
+
+  } catch(e) {
+    dot.className = 'bad';
+    lbl.className = 'bad';
+    lbl.textContent = 'ERR';
+    document.getElementById('ntpwrap').title = 'NTP check failed: ' + e.message;
+  }
+}
+
+function tickClock() {
+  const n = new Date(), p = v => String(v).padStart(2, '0');
+  document.getElementById('clock').textContent =
+    `${p(n.getUTCHours())}:${p(n.getUTCMinutes())}:${p(n.getUTCSeconds())}`;
+  document.getElementById('localclock').textContent =
+    `LOCAL ${p(n.getHours())}:${p(n.getMinutes())}`;
+}
+
+// ── Keyboard ───────────────────────────────────────────────────────────────────
+document.getElementById('callIn').addEventListener('input', e => {
+  checkEntry();
+  updateDXInfo(e.target.value.trim().toUpperCase());
+});
+
+document.addEventListener('keydown', e => {
+  const oponOpen = document.getElementById('oponoverlay').classList.contains('show');
+  const editOpen = document.getElementById('editoverlay').classList.contains('show');
+
+  if (oponOpen) {
+    // Enter/Escape handled by the oponCallIn keydown listener directly
+    return;
+  }
+  if (editOpen) {
+    if (e.key === 'Escape') { e.preventDefault(); closeEdit(); }
+    if (e.key === 'Enter')  { e.preventDefault(); saveEdit(); }
+    return;
+  }
+
+  if (e.key === 'Escape') { clearCW(); doWipe(); return; }
+  if (e.key === 'Enter')  { e.preventDefault(); doLog(); }
+  if (e.key === 'Escape') { e.preventDefault(); doWipe(); }
+  if (e.key === 'F1') { e.preventDefault(); addMsg('MACRO', 'CQ ' + (cfg.callsign||'') + ' CQ ' + (cfg.callsign||'') + ' DE ' + (cfg.callsign||'') + ' K', 'alt'); }
+  if (e.key === 'F2') { e.preventDefault(); addMsg('MACRO', '5NN TU NR ' + (qsos.length + 1), 'alt'); }
+  if (e.key === 'F3') { e.preventDefault(); addMsg('MACRO', 'TU 73 DE ' + (cfg.callsign||''), 'alt'); }
+  if (e.key === 'F4') { e.preventDefault(); openOPON(); }
+});
+
+// ── CAT state handler (called from both port-7374 WS and main WS) ─────────────
+function applyCATState(msg) {
+  const dot = document.getElementById('catdot');
+  const rig = document.getElementById('catrig');
+  if (msg.online === false) {
+    dot.className = 'catdot off';
+    rig.textContent = 'offline';
+    return;
+  }
+  const freqChanged = msg.freq && msg.freq !== currentFreq;
+  const modeChanged = msg.mode && msg.mode !== mode;
+  currentFreq = msg.freq || currentFreq;
+  currentBand = msg.band || currentBand;
+  if (msg.rxFreq && msg.rxFreq !== msg.freq) currentRxFreq = msg.rxFreq;
+  else currentRxFreq = null;
+  document.getElementById('freqdsp').textContent = currentFreq;
+  document.getElementById('banddsp').textContent = currentBand;
+  saveState('freq', currentFreq);
+  saveState('band', currentBand);
+  document.getElementById('sb-cat').textContent = currentFreq + (currentRxFreq ? ' / ' + currentRxFreq : '') + ' ' + msg.mode;
+  dot.className = 'catdot ' + (msg.online ? 'on' : 'off');
+  if (msg.online) rig.textContent = currentFreq + ' ' + msg.mode;
+  // Always update op panel when rig state changes — keeps it in sync with VFO
+  if (msg.online && (freqChanged || modeChanged)) {
+    if (modeChanged) {
+      setMode(msg.mode, false);
+    }
+    broadcastOpState();
+  }
+  // Track rig online state for ESM — re-render bar to show/clear offline warning
+  const wasOnline = cwRigOnline;
+  cwRigOnline = !!msg.online;
+  if (wasOnline !== cwRigOnline) renderCWMacroBar();
+}
+
+// ── CAT WebSocket (port 7374) — used for rigctld/standard rig mode ─────────────
+function connectCAT() {
+  const catWs = new WebSocket('ws://' + location.hostname + ':7374');
+  catWs.onmessage = e => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'CAT_STATE') applyCATState(msg);
+    } catch {}
+  };
+  catWs.onclose = () => setTimeout(connectCAT, 5000);
+  catWs.onerror = () => catWs.close();
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
+function applySolar(d) {
+  // SFI — colour by band conditions: >=150 excellent, >=100 good, <100 poor
+  const sfiEl = document.getElementById('tv-sfi');
+  if (d.sfi !== null && d.sfi !== undefined) {
+    sfiEl.textContent = d.sfi;
+    sfiEl.className   = 'tval ' + (d.sfi >= 150 ? 'solar-good' : d.sfi >= 100 ? 'solar-fair' : 'solar-poor');
+  } else { sfiEl.textContent = '--'; sfiEl.className = 'tval'; }
+
+  // A-index — low is good: <20 quiet, 20-49 unsettled, >=50 storm
+  const aEl = document.getElementById('tv-a');
+  if (d.a !== null && d.a !== undefined) {
+    aEl.textContent = d.a;
+    aEl.className   = 'tval ' + (d.a < 20 ? 'solar-good' : d.a < 50 ? 'solar-fair' : 'solar-poor');
+  } else { aEl.textContent = '--'; aEl.className = 'tval'; }
+
+  // K-index — low is good: 0-1 quiet, 2-3 unsettled, >=4 storm
+  const kEl = document.getElementById('tv-k');
+  if (d.k !== null && d.k !== undefined) {
+    kEl.textContent = d.k;
+    kEl.className   = 'tval ' + (d.k <= 1 ? 'solar-good' : d.k <= 3 ? 'solar-fair' : 'solar-poor');
+  } else { kEl.textContent = '--'; kEl.className = 'tval'; }
+}
+
+function refreshSolar() {
+  // Force a fresh fetch from the server, bypassing the cache
+  ['tv-sfi','tv-a','tv-k'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = '...'; el.className = 'tval'; }
+  });
+  fetch('/api/solar-refresh', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => applySolar(d))
+    .catch(() => fetchSolar());  // fall back to cached
+}
+
+function fetchSolar() {
+  fetch('/api/solar')
+    .then(r => r.json())
+    .then(d => applySolar(d))
+    .catch(() => {
+      ['tv-sfi','tv-a','tv-k'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = '--'; el.className = 'tval'; }
+      });
+    });
+}
+
+async function boot() {
+  try {
+    const r = await fetch('/api/config');
+    cfg = await r.json();
+  } catch {
+    cfg = { callsign: 'NOCALL', operatorId: 'OP1', wsPort: 7373, contest: {} };
+  }
+
+  // Apply config
+  document.getElementById('top-call').textContent = cfg.callsign || 'NOCALL';
+  document.getElementById('top-ver').textContent  = cfg.version ? 'v' + cfg.version : '';
+  document.getElementById('sb-log').textContent   = (cfg.callsign || 'dxlog').toLowerCase() + '.adif';
+  document.getElementById('tv-cl').textContent    = (cfg.clublog && cfg.clublog.enabled) ? 'LIVE' : 'off';
+  stationId = cfg.operatorId || 'OP1';
+
+  // ── Version-change wipe ────────────────────────────────────────────────────
+  // stationId is now correct, so localStorage keys resolve properly.
+  // If the server version changed, clear all transient per-session state so
+  // a fresh expedition starts clean. Runs BEFORE restoreQSTMessages().
+  if (cfg.version) {
+    const lastVersion = localStorage.getItem('tl_server_version');
+    if (lastVersion && lastVersion !== cfg.version) {
+      console.log(`[Version] ${lastVersion} → ${cfg.version}: wiping session state`);
+      // QST messages
+      saveState('qst', []);
+      qstMessages = [];
+      // Best-hour records
+      saveState('bestHr',   0);
+      saveState('myBestHr', 0);
+      bestHr   = 0;
+      myBestHr = 0;
+      // Achievement flags — version the key so old entries never block new ones
+      localStorage.removeItem(ACH_STORE_KEY);
+      shownAchievements.clear();
+    }
+    localStorage.setItem('tl_server_version', cfg.version);
+  }
+
+  // Session ID: persists in localStorage so closing/reopening the tab
+  // restores the same session and master status. Still unique per station.
+  const sessionKey = 'tl_session_' + stationId;
+  if (!localStorage.getItem(sessionKey)) {
+    localStorage.setItem(sessionKey, stationId + '-' + Math.random().toString(36).slice(2, 7).toUpperCase());
+  }
+  sessionId = localStorage.getItem(sessionKey);
+
+  // Default operators list — populated from config or defaults
+  operators = cfg.operators || [cfg.operatorId || 'OP1'];
+
+  // Restore last operator from localStorage — persists across page refreshes.
+  // Key is per operatorId so OP1 and OP2 on different machines restore independently.
+  currentOp = loadState('op', null) || operators[0] || stationId;
+  saveState('op', currentOp);
+  document.getElementById('opbadge').textContent   = currentOp;
+  document.getElementById('opstation').textContent = currentOp + ' / ' + stationId;
+
+  // Restore all persistent state from localStorage
+  bestHr   = loadState('bestHr',   0);
+  myBestHr = loadState('myBestHr', 0);
+
+  const savedMode = loadState('mode', 'SSB');
+  const savedFreq = loadState('freq', '14.225');
+  const savedBand = loadState('band', '20M');
+  if (savedFreq) currentFreq = savedFreq;
+  if (savedBand) currentBand = savedBand;
+  setMode(savedMode, false);  // restore only — don't send to rig
+  document.getElementById('freqdsp').textContent = currentFreq;
+  document.getElementById('banddsp').textContent = currentBand;
+
+  // Show NODE badge by default until server confirms we are master
+  isThisMaster = false;
+  masterId     = cfg.operatorId || 'OP1';
+  updateRoleIndicators();
+  if (cfg.localIP && cfg.localIP !== '127.0.0.1') {
+    setTimeout(() => {
+      addMsg('SYS', 'This station: http://' + cfg.localIP + ':' + (cfg.httpPort || 7375), 'cmd');
+      addMsg('SYS', 'Discovering peers via mDNS...', 'cmd');
+    }, 800);
+  }
+
+  restoreQSTMessages();
+  connectWS();
+  try { connectCAT(); } catch {}
+
+  setInterval(tickClock, 1000);
+  tickClock();
+  checkNTP();
+  setInterval(checkNTP, 5 * 60 * 1000);
+  // Load CW config from main config (now included in /api/config)
+  loadCwConfig(cfg);
+  renderCWMacroBar();
+  setCwEnabled(false); // rig not connected yet — enable when CAT comes online
+  renderAll();
+  fetchSolar();
+  setInterval(fetchSolar, 60 * 60 * 1000);
+  loadSCP();  // belt-and-suspenders; WS push is primary
+
+  // Broadcast our state to peers every 15s so op panel stays current
+  setInterval(() => {
+    broadcastOpState();
+    sendWS({ type: 'PING' });
+    checkRateDrop();
+  }, 60000);
+  // First rate check after 5 minutes
+  setTimeout(checkRateDrop, 300000);
+
+  document.getElementById('callIn').focus();
+}
+
+boot();
+</script>
+</body>
+</html>

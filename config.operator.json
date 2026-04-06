@@ -1,0 +1,36 @@
+{
+  "_comment": "Template for additional stations \u2014 set unique operatorId and run npm install && node server.js",
+  "callsign": "VK0EK",
+  "operatorId": "OP2",
+  "contest": {
+    "name": "DXpedition 2025",
+    "exchange": "serial"
+  },
+  "operators": [
+    "W6OP",
+    "K3LR",
+    "VK2GR",
+    "JA1YCQ",
+    "G3TXF"
+  ],
+  "spots": [],
+  "clublog": {
+    "enabled": false
+  },
+  "cat": {
+    "enabled": false,
+    "rigctldHost": "127.0.0.1",
+    "rigctldPort": 4532,
+    "rigModel": "",
+    "serialPort": "",
+    "baudRate": 19200
+  },
+  "network": {
+    "httpPort": 7375,
+    "wsPort": 7373,
+    "catPort": 7374,
+    "peerPort": 7374
+  },
+  "_configured": false,
+  "peers": []
+}

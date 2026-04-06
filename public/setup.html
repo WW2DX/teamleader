@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Leader — First Run Setup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#fff;border-radius:12px;padding:36px;width:480px;box-shadow:0 4px 24px rgba(0,0,0,.12)}
+.logo{text-align:center;margin-bottom:24px}
+.logo h1{font-size:22px;font-weight:800;color:#1e3a5f;letter-spacing:2px}
+.logo p{font-size:13px;color:#6b7280;margin-top:4px}
+.step-badge{display:inline-block;background:#1e3a5f;color:#fff;font-size:10px;font-weight:700;border-radius:100px;padding:2px 10px;letter-spacing:1px;margin-bottom:20px}
+h2{font-size:16px;font-weight:700;color:#111827;margin-bottom:4px}
+.sub{font-size:12px;color:#6b7280;margin-bottom:20px}
+.field{margin-bottom:16px}
+label{display:block;font-size:11px;font-weight:700;color:#374151;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+input{width:100%;padding:10px 12px;border:2px solid #e5e7eb;border-radius:6px;font-size:15px;font-family:'Courier New',monospace;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#111827;outline:none;transition:border-color .15s}
+input:focus{border-color:#1e3a5f}
+input::placeholder{color:#d1d5db;font-weight:400;letter-spacing:0;text-transform:none}
+.hint{font-size:11px;color:#9ca3af;margin-top:4px}
+.divider{border:none;border-top:1px solid #f3f4f6;margin:20px 0}
+#btn{width:100%;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:1px;margin-top:8px;transition:background .15s}
+#btn:hover{background:#15803d}
+#btn:disabled{background:#9ca3af;cursor:default}
+#err{color:#dc2626;font-size:12px;margin-top:8px;display:none}
+#ok{color:#16a34a;font-size:13px;font-weight:600;text-align:center;margin-top:12px;display:none}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:12px;margin-bottom:20px;font-size:12px;color:#1e40af;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>TEAM LEADER</h1>
+    <p>DXpedition Logging System — v1.2.0</p>
+  </div>
+
+  <div class="step-badge">FIRST RUN SETUP</div>
+  <h2>Configure this station</h2>
+  <p class="sub">Each laptop needs its own identity. This takes 30 seconds.</p>
+
+  <div class="info-box">
+    📡 <strong>Peer mesh topology</strong> — every station is equal. Once configured, this station will automatically discover and sync with other TeamLeader stations on the same Wi-Fi network. No master required.
+  </div>
+
+  <div class="field">
+    <label>DXpedition Callsign</label>
+    <input type="text" id="callsign" placeholder="VK0EK" maxlength="12" autocomplete="off"/>
+    <div class="hint">The callsign used on the air — same on every station</div>
+  </div>
+
+  <div class="field">
+    <label>This Station ID</label>
+    <input type="text" id="operatorId" placeholder="OP1" maxlength="6" autocomplete="off"/>
+    <div class="hint">Unique ID for this laptop — OP1, OP2, OP3 etc. Must be different on each machine</div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="field">
+    <label>Your Operator Callsign (optional)</label>
+    <input type="text" id="myCall" placeholder="WW2DX" maxlength="12" autocomplete="off"/>
+    <div class="hint">Pre-fills your OPON. You can change this at any time while logging.</div>
+  </div>
+
+  <button id="btn" onclick="doSetup()">Configure &amp; Start Logging</button>
+  <div id="err"></div>
+  <div id="ok">✓ Configured! Redirecting to logger...</div>
+</div>
+
+<script>
+// Auto-detect next available station ID from peers
+async function detectStationId() {
+  try {
+    const r = await fetch('/api/peers');
+    const data = await r.json();
+    const taken = (data.discovered||[]).map(p => p.operatorId).filter(Boolean);
+    let n = 1;
+    while (taken.includes('OP' + n)) n++;
+    document.getElementById('operatorId').placeholder = 'OP' + n;
+    if (!document.getElementById('operatorId').value) {
+      document.getElementById('operatorId').value = 'OP' + n;
+    }
+  } catch {}
+}
+
+// Auto-fill callsign from discovered peers
+async function detectCallsign() {
+  try {
+    const r = await fetch('/api/peers');
+    const data = await r.json();
+    const peer = data.discovered?.[0];
+    if (peer?.callsign && !document.getElementById('callsign').value) {
+      document.getElementById('callsign').value = peer.callsign;
+    }
+  } catch {}
+}
+
+async function doSetup() {
+  const btn       = document.getElementById('btn');
+  const errEl     = document.getElementById('err');
+  const okEl      = document.getElementById('ok');
+  const callsign  = document.getElementById('callsign').value.trim().toUpperCase();
+  const operatorId = document.getElementById('operatorId').value.trim().toUpperCase();
+  const myCall    = document.getElementById('myCall').value.trim().toUpperCase();
+
+  errEl.style.display = 'none';
+
+  if (!callsign) { errEl.textContent = 'DXpedition callsign is required.'; errEl.style.display='block'; return; }
+  if (!operatorId) { errEl.textContent = 'Station ID is required.'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  try {
+    const r = await fetch('/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callsign, operatorId, operators: myCall ? [myCall] : [] }),
+    });
+    const result = await r.json();
+    if (result.ok) {
+      // Save initial operator to localStorage
+      if (myCall) localStorage.setItem('tl_op_' + operatorId, JSON.stringify(myCall));
+      okEl.style.display = 'block';
+      setTimeout(() => window.location.href = '/', 1200);
+    } else {
+      errEl.textContent = result.error || 'Setup failed.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Configure & Start Logging';
+    }
+  } catch(e) {
+    errEl.textContent = 'Connection error: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Configure & Start Logging';
+  }
+}
+
+// Enter key submits
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doSetup(); });
+
+// Auto-detect on load
+detectCallsign();
+detectStationId();
+</script>
+</body>
+</html>
