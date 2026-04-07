@@ -739,6 +739,13 @@ function handlePeerMsg(fromIP, raw) {
         if (missing.length>0) { console.log(`[Peer] Sending ${missing.length} QSOs to ${fromIP}`); missing.forEach(q=>sendToPeer(fromIP,{type:'PEER_QSO',qso:q})); }
       }
       sendToPeer(fromIP, { type:'PEER_LIST', peers:getPeerInfoList() });
+      // Send current operator states so the peer sees us in the Operator Status panel immediately
+      getLocalOpStates().forEach(op=>sendToPeer(fromIP, op));
+      // Update our discoveredPeers with the peer's operator callsign if provided
+      if (msg.callsign && discoveredPeers.has(fromIP)) {
+        discoveredPeers.get(fromIP).callsign = msg.callsign;
+        broadcastPeerList();
+      }
       break;
     }
     case 'PEER_QSO': {
@@ -762,7 +769,15 @@ function handlePeerMsg(fromIP, raw) {
     }
     case 'PEER_QSO_EDIT':  updateQSO(msg.qso); broadcastToBrowsers({type:'QSO_EDIT',qso:msg.qso}); break;
     case 'PEER_QSO_DELETE': softDelete(msg.id); broadcastToBrowsers({type:'QSO_DELETE',id:msg.id}); break;
-    case 'PEER_OP_STATE':  broadcastToBrowsers({...msg, type:'OP_STATE'}); break;
+    case 'PEER_OP_STATE':
+      broadcastToBrowsers({...msg, type:'OP_STATE'});
+      // Update discovered peer's callsign with the current operator name so the
+      // Network bar shows "NN2DX [OP2]" instead of "VK0EK [OP2]"
+      if (msg.callsign && discoveredPeers.has(fromIP)) {
+        discoveredPeers.get(fromIP).callsign = msg.callsign;
+        broadcastPeerList();
+      }
+      break;
     case 'PEER_QST':       broadcastToBrowsers({type:'QST',from:msg.from,text:msg.text,ts:msg.ts}); break;
     case 'PEER_ACHIEVEMENT': broadcastToBrowsers({type:'ACHIEVEMENT',achievementType:msg.achievementType,band:msg.band,count:msg.count}); break;
     case 'PEER_LIST':
@@ -819,7 +834,9 @@ function startPeerServer() {
 
 // ── Browser WebSocket ──────────────────────────────────────────────────────────
 let _broadcastToBrowsers = null;
+let _getLocalOpStates = null;
 function broadcastToBrowsers(msg) { if(typeof _broadcastToBrowsers==='function') _broadcastToBrowsers(msg); }
+function getLocalOpStates() { return typeof _getLocalOpStates==='function' ? _getLocalOpStates() : []; }
 
 function startBrowserWS() {
   const wss=new WebSocket.Server({port:WS_PORT});
@@ -893,7 +910,7 @@ function startBrowserWS() {
         case 'OP_STATE':
           if(msg.callsign&&stations.has(opId)) stations.get(opId).callsign=msg.callsign;
           bcastAll({...msg,stationId:opId,operatorId:stations.get(opId)?.operatorId||opId});
-          broadcastToPeers({type:'PEER_OP_STATE',...msg,stationId:opId,sourceStation:config.operatorId}); break;
+          broadcastToPeers({...msg,type:'PEER_OP_STATE',stationId:opId,sourceStation:config.operatorId}); break;
 
         case 'OPON_CHANGE':
           if(stations.has(opId)) stations.get(opId).callsign=msg.callsign;
@@ -998,6 +1015,10 @@ function startBrowserWS() {
   function bcastExcept(xId,msg) { const d=JSON.stringify(msg); for(const[id,i]of stations) if(id!==xId&&i.ws.readyState===WebSocket.OPEN) i.ws.send(d); }
 
   _broadcastToBrowsers = bcastAll;
+  _getLocalOpStates = () => [...stations.entries()].map(([id,info])=>({
+    type:'PEER_OP_STATE', stationId:id, operatorId:info.operatorId||id,
+    callsign:info.callsign||id, sourceStation:config.operatorId,
+  }));
 }
 
 // ── HTTP ───────────────────────────────────────────────────────────────────────

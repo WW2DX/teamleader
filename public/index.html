@@ -849,11 +849,12 @@ function handleMsg(msg) {
           online:     s.online,
         });
       });
-      // Remove entries no longer in STATION_LIST entirely (they have disconnected)
+      // Remove LOCAL entries no longer in STATION_LIST (they have disconnected).
+      // Preserve remote peer entries — they are managed by PEER_OP_STATE messages.
       const activeIds = new Set((msg.stations || []).map(s => s.id));
       const toDelete  = [];
       opStatus.forEach((info, sid) => {
-        if (!activeIds.has(sid)) toDelete.push(sid);
+        if (!activeIds.has(sid) && !info.isRemotePeer) toDelete.push(sid);
       });
       toDelete.forEach(sid => opStatus.delete(sid));
       // Also purge duplicate callsign entries — keep only the online/most-recent one
@@ -869,6 +870,7 @@ function handleMsg(msg) {
         rxFreq:     msg.rxFreq || msg.txFreq,
         mode:       msg.mode,
         online:     true,
+        isRemotePeer: !!msg.sourceStation,
       });
       // Sync callsign into stationCallsigns so netbar shows operator name
       if (stationCallsigns.has(msg.stationId)) {
@@ -921,6 +923,16 @@ function handleMsg(msg) {
 
     case 'PEER_LIST_UPDATE':
       renderPeerList(msg.peers || []);
+      // Mark remote peer opStatus entries offline/remove when peer disconnects
+      {
+        const onlinePeerOps = new Set((msg.peers || []).filter(p => !p.isSelf && p.online).map(p => p.operatorId));
+        opStatus.forEach((info, sid) => {
+          if (info.isRemotePeer && !onlinePeerOps.has(info.operatorId || sid)) {
+            opStatus.delete(sid);
+          }
+        });
+        renderOpPanel();
+      }
       break;
 
     case 'QST':
