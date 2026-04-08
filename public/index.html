@@ -959,6 +959,12 @@ function sendWS(msg) {
 }
 
 // ── Mode ───────────────────────────────────────────────────────────────────────
+const FT8_FREQS = {
+  '160M': '1.840', '80M': '3.573', '60M': '5.357', '40M': '7.074',
+  '30M': '10.136', '20M': '14.074', '17M': '18.100', '15M': '21.074',
+  '12M': '24.915', '10M': '28.074', '6M': '50.313',
+};
+
 function setMode(m, sendToRig) {
   mode = m;
   document.getElementById('mb-SSB').className = 'mb' + (m === 'SSB' ? ' ssb' : '');
@@ -968,6 +974,16 @@ function setMode(m, sendToRig) {
   document.getElementById('rstS').value = rst[0];
   document.getElementById('rstR').value = rst[1];
   saveState('mode', m);
+  // When FT8 is selected, auto-tune to the standard FT8 frequency for the current band
+  if (m === 'FT8' && sendToRig && currentBand && FT8_FREQS[currentBand]) {
+    const ft8Freq = FT8_FREQS[currentBand];
+    currentFreq = ft8Freq;
+    document.getElementById('freqdsp').textContent = ft8Freq;
+    document.getElementById('banddsp').textContent = currentBand;
+    document.getElementById('sb-cat').textContent  = ft8Freq + ' FT8';
+    saveState('freq', ft8Freq);
+    sendWS({ type: 'SET_FREQ', freq: parseFloat(ft8Freq) });
+  }
   // Only send to rig when explicitly requested (not on boot restore or CAT state updates)
   if (sendToRig) sendWS({ type: 'SET_MODE', mode: m });
   renderCWMacroBar(); // show/hide CW bar based on new mode

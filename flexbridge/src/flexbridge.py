@@ -225,6 +225,10 @@ class SmartSDR:
                 log.warning(f'[SmartSDR] Command {seq} REJECTED error {err}: {msg_text}')
             else:
                 log.info(f'[SmartSDR] Command {seq} OK: {msg_text}')
+                # Capture stream IDs from 'stream create' responses
+                if seq in self.handlers:
+                    self.handlers[seq](msg_text)
+                    del self.handlers[seq]
             return
         # Status message: S<handle>|<object> <k=v ...>
         m = re.match(r'^S[0-9A-Fa-f]+\|(.+)$', line)
@@ -258,6 +262,24 @@ class SmartSDR:
                         pass
                 elif k == 'mode' and not in_holdoff:
                     state['mode'] = v.upper()
+            return
+        # dax_audio_stream / audio_stream status — track stream IDs
+        m = re.match(r'^audio_stream (\S+) (.+)$', body)
+        if m:
+            pairs = dict(re.findall(r'(\w+)=(\S+)', m.group(2)))
+            dax_ch = int(pairs.get('dax_channel', 0))
+            if dax_ch in DAX_CHANNELS:
+                stype = pairs.get('type', '')
+                try:
+                    sid = int(m.group(1), 16)
+                except ValueError:
+                    return
+                if 'rx' in stype.lower():
+                    _dax_rx_streams[dax_ch] = {'stream_id': sid}
+                    log.info(f'[DAX] RX stream status: ch={dax_ch} stream_id=0x{sid:08X}')
+                elif 'tx' in stype.lower():
+                    _dax_tx_streams[dax_ch] = {'stream_id': sid}
+                    log.info(f'[DAX] TX stream status: ch={dax_ch} stream_id=0x{sid:08X}')
 
 
 radio = SmartSDR()
@@ -539,11 +561,14 @@ def handle_cat(cmd):
             return f'FB{state["rx_freq_hz"]:011d};'
 
     # IF — transceiver info (comprehensive status)
+    # TS-2000 IF format (37 chars excl ';', 38 total):
+    # IF [freq 11] [step 5] [rit±ofs 5] [rit 1] [xit 1] [bank 1] [ch 2] [tx 1]
+    #    [mode 1] [fn 1] [scan 1] [split 1] [tone 1] [tone# 2] [shift 1] ;
     if cmd == 'IF':
         freq  = f'{state["freq_hz"]:011d}'
         mode  = _mode_to_ts2000(state['mode'])
-        # IF format: IF[11 freq][5 rit][?][?][?][?][1 rit on][1 xit][1 mem][3 mem#][1 tx/rx][1 mode][1 vfo][1 scan][1 split][1 tone][1 tone#][?]
-        return f'IF{freq}     +000000000{mode}0000000;'
+        split = '1' if state.get('split') else '0'
+        return f'IF{freq}     +0000000000{mode}00{split}0000;'
 
     # MD — mode
     if cmd.startswith('MD'):
@@ -581,6 +606,144 @@ def _mode_to_ts2000(mode):
 def _ts2000_to_mode(code):
     return {'1':'LSB','2':'USB','3':'CW','4':'FM','5':'AM',
             '6':'FSK','9':'DIGU'}.get(code, 'USB')
+
+
+# ── Hamlib rigctld protocol handler ───────────────────────────────────────────
+# WSJT-X (and other hamlib clients) connect via TCP and send newline-terminated
+# commands in the rigctld text protocol, NOT Kenwood TS-2000 protocol.
+
+_RIGCTLD_MODE_TO_FLEX = {
+    'USB': 'USB', 'LSB': 'LSB', 'CW': 'CW', 'CWR': 'CW-R',
+    'FM': 'FM', 'AM': 'AM', 'RTTY': 'FSK', 'RTTYR': 'FSK',
+    'PKTUSB': 'DIGU', 'PKTLSB': 'DIGL',
+}
+_FLEX_MODE_TO_RIGCTLD = {v: k for k, v in _RIGCTLD_MODE_TO_FLEX.items()}
+_FLEX_MODE_TO_RIGCTLD.update({'DIGU': 'PKTUSB', 'DIGL': 'PKTLSB', 'CW-R': 'CWR'})
+
+def handle_rigctld(line):
+    """Parse a rigctld-protocol command, return response string (newline-terminated)."""
+    line = line.strip()
+    if not line:
+        return ''
+
+    # \dump_state — WSJT-X sends this first to query rig capabilities
+    if line == '\\dump_state' or line == '+\\dump_state':
+        return (
+            '1\n'               # protocol version
+            '214\n'             # rig model (TS-2000)
+            '2\n'               # ITU region
+            # freq range: rxLow rxHigh modes low_power high_power vfo ant
+            '30000 60000000 0xef -1 -1 0x1 0x0\n'
+            '0 0 0 0 0 0 0\n'  # end of rx range
+            '30000 60000000 0xef 5000 100000 0x1 0x0\n'
+            '0 0 0 0 0 0 0\n'  # end of tx range
+            '0 0\n'            # end of tuning steps
+            '0 0\n'            # end of filters
+            '0\n'              # max rit
+            '0\n'              # max xit
+            '0\n'              # max ifshift
+            '0\n'              # announces
+            '\n'               # preamp
+            '\n'               # attenuator
+            '0x0\n'            # has get_func
+            '0x0\n'            # has set_func
+            '0x0\n'            # has get_level
+            '0x0\n'            # has set_level
+            '0x0\n'            # has get_parm
+            '0x0\n'            # has set_parm
+            '\n'               # end
+        )
+
+    # Handle extended response prefix (+)
+    extended = line.startswith('+')
+    if extended:
+        line = line[1:]
+
+    parts = line.split()
+    verb = parts[0] if parts else ''
+
+    # f / \get_freq — get frequency
+    if verb in ('f', '\\get_freq'):
+        freq = state['freq_hz']
+        if extended:
+            return f'get_freq: {freq}\n'
+        return f'{freq}\n'
+
+    # F / \set_freq <freq> — set frequency
+    if verb in ('F', '\\set_freq'):
+        if len(parts) >= 2:
+            try:
+                hz = int(float(parts[1]))
+                state['freq_hz'] = hz
+                state['tx_freq_hz'] = hz
+                if state['connected']:
+                    radio.set_freq(hz)
+            except ValueError:
+                return 'RPRT -1\n'
+        return 'RPRT 0\n'
+
+    # m / \get_mode — get mode and passband
+    if verb in ('m', '\\get_mode'):
+        m = _FLEX_MODE_TO_RIGCTLD.get(state['mode'], 'USB')
+        if extended:
+            return f'get_mode: {m}\nPassband: 3000\n'
+        return f'{m}\n3000\n'
+
+    # M / \set_mode <mode> <passband> — set mode
+    if verb in ('M', '\\set_mode'):
+        if len(parts) >= 2:
+            rigctld_mode = parts[1].upper()
+            flex_mode = _RIGCTLD_MODE_TO_FLEX.get(rigctld_mode, None)
+            if flex_mode:
+                state['mode'] = flex_mode
+                if state['connected']:
+                    radio.set_mode(flex_mode)
+        return 'RPRT 0\n'
+
+    # t / \get_ptt — get PTT state
+    if verb in ('t', '\\get_ptt'):
+        if extended:
+            return 'get_ptt: 0\n'
+        return '0\n'
+
+    # T / \set_ptt <0|1>
+    if verb in ('T', '\\set_ptt'):
+        return 'RPRT 0\n'
+
+    # v / \get_vfo — get current VFO
+    if verb in ('v', '\\get_vfo'):
+        if extended:
+            return 'get_vfo: VFOA\n'
+        return 'VFOA\n'
+
+    # V / \set_vfo
+    if verb in ('V', '\\set_vfo'):
+        return 'RPRT 0\n'
+
+    # s / \get_split_vfo — get split state
+    if verb in ('s', '\\get_split_vfo'):
+        sp = '1' if state['split'] else '0'
+        if extended:
+            return f'get_split_vfo: {sp}\nTX VFO: VFOB\n'
+        return f'{sp}\nVFOB\n'
+
+    # i / \get_split_freq — get split TX freq
+    if verb in ('i', '\\get_split_freq'):
+        freq = state['tx_freq_hz']
+        if extended:
+            return f'get_split_freq: {freq}\n'
+        return f'{freq}\n'
+
+    # q / \quit — close connection
+    if verb in ('q', '\\quit'):
+        return None  # signal to close
+
+    # chk_vfo — some hamlib clients probe this
+    if verb == '\\chk_vfo':
+        return 'CHKVFO 0\n'
+
+    # Unrecognised
+    return 'RPRT -1\n'
 
 # ── PTY virtual serial port ────────────────────────────────────────────────────
 def start_pty_server():
@@ -630,21 +793,46 @@ def start_pty_server():
 
 # ── TCP CAT server ─────────────────────────────────────────────────────────────
 def start_tcp_cat_server():
-    """TCP server on args.cat_port accepting CAT commands."""
+    """TCP server on args.cat_port accepting CAT commands.
+    Auto-detects protocol: Kenwood TS-2000 (;-delimited) or hamlib rigctld (newline-delimited).
+    WSJT-X uses the rigctld protocol when connecting via TCP.
+    """
     def _handle_client(conn, addr):
         log.info(f'CAT TCP client connected: {addr}')
         buf = ''
+        protocol = None  # 'kenwood' or 'rigctld', auto-detected on first data
         try:
             while True:
                 data = conn.recv(256)
                 if not data:
                     break
                 buf += data.decode('ascii', errors='replace')
-                while ';' in buf:
-                    cmd, buf = buf.split(';', 1)
-                    resp = handle_cat(cmd + ';')
-                    if resp:
-                        conn.sendall(resp.encode())
+
+                # Auto-detect protocol from first received data
+                if protocol is None and buf.strip():
+                    if ';' in buf:
+                        protocol = 'kenwood'
+                        log.info(f'CAT TCP {addr}: detected Kenwood TS-2000 protocol')
+                    elif '\n' in buf:
+                        protocol = 'rigctld'
+                        log.info(f'CAT TCP {addr}: detected hamlib rigctld protocol')
+                    else:
+                        continue  # wait for more data to detect delimiter
+
+                if protocol == 'kenwood':
+                    while ';' in buf:
+                        cmd, buf = buf.split(';', 1)
+                        resp = handle_cat(cmd + ';')
+                        if resp:
+                            conn.sendall(resp.encode())
+                else:
+                    while '\n' in buf:
+                        line, buf = buf.split('\n', 1)
+                        resp = handle_rigctld(line)
+                        if resp is None:
+                            return  # quit command
+                        if resp:
+                            conn.sendall(resp.encode())
         except Exception:
             pass
         finally:
@@ -716,7 +904,21 @@ class FlexBridgeAPI(BaseHTTPRequestHandler):
             self._send(200, {'ok': True, 'message': 'Scan started', 'current': state['radios_on_lan']})
 
         elif path == '/dax/stats':
-            self._send(200, state['dax'])
+            self._send(200, {
+                'dax': state['dax'],
+                'rx_streams': {str(k): {'stream_id': hex(v['stream_id'])} for k, v in _dax_rx_streams.items()},
+                'tx_streams': {str(k): {'stream_id': hex(v['stream_id'])} for k, v in _dax_tx_streams.items()},
+                'audio_device': 'BlackHole 2ch' if _dax_running else None,
+                'running': _dax_running,
+            })
+
+        elif path == '/dax/setup':
+            # Manually trigger DAX stream setup (useful if radio was already connected)
+            if not state['connected']:
+                self._send(400, {'ok': False, 'error': 'Radio not connected'})
+            else:
+                threading.Thread(target=setup_dax_streams, daemon=True).start()
+                self._send(200, {'ok': True, 'message': 'DAX stream setup initiated'})
 
         else:
             self._send(404, {'error': 'not found'})
@@ -740,6 +942,9 @@ class FlexBridgeAPI(BaseHTTPRequestHandler):
                 radio.disconnect()
             ok = radio.connect(ip)
             self._send(200 if ok else 502, {'ok': ok, 'ip': ip})
+            if ok:
+                # Set up DAX audio streams after connection
+                threading.Thread(target=lambda: (time.sleep(2), setup_dax_streams()), daemon=True).start()
 
         elif path == '/radio/disconnect':
             radio.disconnect()
@@ -801,12 +1006,356 @@ def start_rest_api():
     log.info(f'REST API listening on 127.0.0.1:{args.status_port} (threaded)')
     threading.Thread(target=srv.serve_forever, daemon=True).start()
 
+# ── DAX audio bridge (VITA-49 ↔ BlackHole virtual audio) ──────────────────────
+# SmartSDR sends/receives DAX audio as VITA-49 (VRT) UDP packets containing
+# float32 PCM samples.  We route these through BlackHole so WSJT-X can use
+# standard audio device I/O.
+#
+# WSJT-X config:
+#   Soundcard Input  = BlackHole 2ch   (receives RX audio from radio)
+#   Soundcard Output = BlackHole 2ch   (sends TX audio to radio)
+
+DAX_UDP_BASE   = 4991          # UDP base port — we use base+channel
+DAX_SAMPLE_RATE = 24000        # SmartSDR DAX narrow = 24 kHz
+DAX_BLOCK_SIZE  = 128          # samples per audio callback
+
+# VITA-49 header constants
+VITA49_PKT_TYPE_IF_DATA     = 0x1  # IF Data with stream ID
+VITA49_PKT_TYPE_EXT_DATA    = 0x3  # Extension Data with stream ID
+VITA49_HEADER_WORDS         = 7    # header + stream_id + class_id(2) + timestamp(3)
+VITA49_HEADER_BYTES         = VITA49_HEADER_WORDS * 4
+
+_dax_rx_streams = {}   # dax_channel -> {'stream_id': int, 'udp_port': int}
+_dax_tx_streams = {}   # dax_channel -> {'stream_id': int}
+_dax_udp_sock   = None
+_dax_running    = False
+
+def _find_blackhole_device():
+    """Find BlackHole 2ch device index."""
+    try:
+        import sounddevice as sd
+        for i, d in enumerate(sd.query_devices()):
+            if 'BlackHole' in d['name'] and d['max_output_channels'] >= 2:
+                return i
+        return None
+    except Exception as e:
+        log.warning(f'[DAX] Cannot query audio devices: {e}')
+        return None
+
+_vita49_debug_count = 0
+
+def _parse_vita49_audio(data):
+    """Parse a VITA-49 packet and extract float32 PCM samples.
+    SmartSDR uses variable-length VITA-49 headers depending on packet flags.
+    Returns (stream_id, samples_array) or (None, None) on error.
+    """
+    global _vita49_debug_count
+    import numpy as np
+    if len(data) < 8:
+        return None, None
+
+    # Word 0: packet header (big-endian)
+    hdr = struct.unpack_from('>I', data, 0)[0]
+    pkt_type    = (hdr >> 28) & 0xF
+    has_class   = (hdr >> 27) & 1  # C bit
+    has_trailer = (hdr >> 26) & 1  # T bit
+    tsi         = (hdr >> 22) & 0x3  # integer timestamp type
+    tsf         = (hdr >> 20) & 0x3  # fractional timestamp type
+    pkt_size    = hdr & 0xFFFF       # total packet size in 32-bit words
+
+    # Word 1: stream ID
+    stream_id = struct.unpack_from('>I', data, 4)[0]
+
+    # Calculate actual header size from flags
+    hdr_words = 2  # header word + stream ID
+    if has_class:
+        hdr_words += 2  # class ID is 2 words (OUI + class)
+    if tsi:
+        hdr_words += 1  # integer timestamp
+    if tsf:
+        hdr_words += 2  # fractional timestamp (64-bit)
+
+    trailer_words = 1 if has_trailer else 0
+    payload_words = pkt_size - hdr_words - trailer_words
+    payload_offset = hdr_words * 4
+    payload_bytes = payload_words * 4
+
+    # Log first few packets for debugging
+    if _vita49_debug_count < 3:
+        _vita49_debug_count += 1
+        log.info(f'[DAX] VITA-49 pkt: type={pkt_type} class={has_class} trailer={has_trailer} '
+                 f'tsi={tsi} tsf={tsf} size={pkt_size}w hdr={hdr_words}w payload={payload_words}w '
+                 f'stream=0x{stream_id:08X} raw_len={len(data)}')
+        if payload_bytes > 0 and payload_offset + payload_bytes <= len(data):
+            raw = data[payload_offset:payload_offset+16]
+            log.info(f'[DAX] Payload hex (first 16B): {raw.hex()}')
+            # Show samples in both endianness
+            s_be = np.frombuffer(data, dtype='>f4', offset=payload_offset, count=min(4, payload_words))
+            s_le = np.frombuffer(data, dtype='<f4', offset=payload_offset, count=min(4, payload_words))
+            log.info(f'[DAX] Samples BE f32: {s_be}')
+            log.info(f'[DAX] Samples LE f32: {s_le}')
+
+    if payload_bytes <= 0 or payload_offset + payload_bytes > len(data):
+        return stream_id, np.array([], dtype=np.float32)
+
+    # SmartSDR VITA-49 DAX audio: big-endian float32, interleaved stereo (L,R,L,R)
+    interleaved = np.frombuffer(data, dtype='>f4', offset=payload_offset, count=payload_words)
+    # Extract left channel only (every other sample) — mono is sufficient for FT8/WSJT-X
+    if len(interleaved) >= 2:
+        samples = interleaved[0::2].copy()  # left channel
+    else:
+        samples = interleaved.copy()
+    return stream_id, samples.astype(np.float32)
+
+def _build_vita49_tx_packet(stream_id, samples, seq_counter):
+    """Build a VITA-49 packet from float32 samples for DAX TX."""
+    import numpy as np
+    payload = samples.astype('>f4').tobytes()
+    n_payload_words = len(payload) // 4
+    total_words = VITA49_HEADER_WORDS + n_payload_words + 1  # +1 trailer
+    # Header word: type=0x1 (IF data w/ stream ID), C=1 (class ID), T=1 (trailer)
+    hdr = (0x1 << 28) | (1 << 27) | (1 << 26) | (1 << 20) | ((seq_counter & 0xF) << 16) | (total_words & 0xFFFF)
+    # Class ID (2 words) — FlexRadio OUI + DAX audio class
+    class_oui = 0x00001C2D  # FlexRadio Systems OUI
+    class_id  = 0x03E30000  # DAX audio class
+    # Timestamp — fractional (we just use 0)
+    ts_int  = 0
+    ts_frac_hi = 0
+    ts_frac_lo = 0
+    header = struct.pack('>IIIIIII',
+        hdr, stream_id, class_oui, class_id, ts_int, ts_frac_hi, ts_frac_lo)
+    trailer = struct.pack('>I', 0)
+    return header + payload + trailer
+
+def start_dax_audio():
+    """Start DAX audio bridge: receive VITA-49 RX audio → BlackHole out,
+    capture BlackHole in → VITA-49 TX audio back to radio."""
+    global _dax_udp_sock, _dax_running
+
+    try:
+        import sounddevice as sd
+        import numpy as np
+    except ImportError as e:
+        log.warning(f'[DAX] Cannot start audio bridge — missing module: {e}')
+        log.warning('[DAX] Install with: pip3 install sounddevice numpy')
+        return
+
+    bh_idx = _find_blackhole_device()
+    if bh_idx is None:
+        log.warning('[DAX] BlackHole 2ch not found — DAX audio bridge disabled')
+        log.warning('[DAX] Install BlackHole: brew install --cask blackhole-2ch')
+        return
+
+    bh_name = sd.query_devices(bh_idx)['name']
+    log.info(f'[DAX] Using audio device: {bh_name} (index {bh_idx})')
+
+    # Bind UDP socket for VITA-49 audio
+    _dax_udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    _dax_udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    udp_port = DAX_UDP_BASE + DAX_CHANNELS[0]
+    try:
+        _dax_udp_sock.bind(('0.0.0.0', udp_port))
+    except OSError:
+        # Try a dynamic port if preferred port is busy
+        _dax_udp_sock.bind(('0.0.0.0', 0))
+        udp_port = _dax_udp_sock.getsockname()[1]
+    _dax_udp_sock.settimeout(0.1)
+    log.info(f'[DAX] UDP listener on port {udp_port}')
+
+    # Ring buffer for RX audio: VITA-49 packets → BlackHole output
+    _rx_buf_lock = threading.Lock()
+    _rx_buf = np.zeros(DAX_SAMPLE_RATE * 2, dtype=np.float32)  # 2-second ring
+    _rx_write_pos = [0]
+    _rx_read_pos  = [0]
+
+    # TX audio ring buffer: BlackHole input → VITA-49 packets
+    _tx_buf_lock = threading.Lock()
+    _tx_buf = np.zeros(DAX_SAMPLE_RATE * 2, dtype=np.float32)
+    _tx_write_pos = [0]
+    _tx_read_pos  = [0]
+
+    _dax_running = True
+    buf_len = len(_rx_buf)
+    _output_callbacks = [0]  # debug counter
+    _underruns = [0]
+
+    def _udp_rx_thread():
+        """Receive VITA-49 DAX RX packets and write PCM to ring buffer."""
+        pkt_count = 0
+        while _dax_running:
+            try:
+                data, addr = _dax_udp_sock.recvfrom(8192)
+                stream_id, samples = _parse_vita49_audio(data)
+                if samples is not None and len(samples) > 0:
+                    n = len(samples)
+                    with _rx_buf_lock:
+                        wp = _rx_write_pos[0]
+                        # Numpy bulk copy into ring buffer
+                        start = wp % buf_len
+                        if start + n <= buf_len:
+                            _rx_buf[start:start + n] = samples
+                        else:
+                            split = buf_len - start
+                            _rx_buf[start:] = samples[:split]
+                            _rx_buf[:n - split] = samples[split:]
+                        _rx_write_pos[0] = wp + n
+                    pkt_count += 1
+                    state['dax'][DAX_CHANNELS[0]]['rx_packets'] = pkt_count
+            except socket.timeout:
+                continue
+            except Exception as e:
+                if _dax_running:
+                    log.debug(f'[DAX] UDP recv: {e}')
+
+    def _audio_output_callback(outdata, frames, time_info, status):
+        """sounddevice output callback — feeds RX audio to BlackHole."""
+        _output_callbacks[0] += 1
+        with _rx_buf_lock:
+            rp = _rx_read_pos[0]
+            wp = _rx_write_pos[0]
+            available = wp - rp
+            if available >= frames:
+                # Numpy bulk read from ring buffer
+                start = rp % buf_len
+                if start + frames <= buf_len:
+                    mono = _rx_buf[start:start + frames]
+                else:
+                    split = buf_len - start
+                    mono = np.concatenate((_rx_buf[start:], _rx_buf[:frames - split]))
+                outdata[:, 0] = mono
+                outdata[:, 1] = mono  # mono → stereo
+                _rx_read_pos[0] = rp + frames
+            else:
+                outdata[:] = 0.0
+                _underruns[0] += 1
+        # Log stats periodically (every ~5 seconds at 24kHz/128 block = ~937 callbacks)
+        if _output_callbacks[0] % 1000 == 0:
+            log.info(f'[DAX] Audio output: {_output_callbacks[0]} callbacks, {_underruns[0]} underruns, buf_avail={available} samples')
+
+    def _audio_input_callback(indata, frames, time_info, status):
+        """sounddevice input callback — captures TX audio from BlackHole."""
+        with _tx_buf_lock:
+            wp = _tx_write_pos[0]
+            n = frames
+            start = wp % buf_len
+            left = indata[:, 0]
+            if start + n <= buf_len:
+                _tx_buf[start:start + n] = left
+            else:
+                split = buf_len - start
+                _tx_buf[start:] = left[:split]
+                _tx_buf[:n - split] = left[split:]
+            _tx_write_pos[0] = wp + n
+
+    # Start sounddevice streams
+    try:
+        out_stream = sd.OutputStream(
+            device=bh_idx,
+            samplerate=DAX_SAMPLE_RATE,
+            channels=2,
+            dtype='float32',
+            blocksize=DAX_BLOCK_SIZE,
+            callback=_audio_output_callback,
+        )
+        in_stream = sd.InputStream(
+            device=bh_idx,
+            samplerate=DAX_SAMPLE_RATE,
+            channels=2,
+            dtype='float32',
+            blocksize=DAX_BLOCK_SIZE,
+            callback=_audio_input_callback,
+        )
+        out_stream.start()
+        in_stream.start()
+        log.info(f'[DAX] Audio streams started (rate={DAX_SAMPLE_RATE}, device={bh_name})')
+    except Exception as e:
+        log.error(f'[DAX] Failed to start audio streams: {e}')
+        return
+
+    # Start UDP receiver thread
+    threading.Thread(target=_udp_rx_thread, daemon=True).start()
+
+    # TX sender thread — reads from TX ring buffer and sends VITA-49 to radio
+    def _tx_sender_thread():
+        seq = 0
+        tx_chunk = 128  # samples per TX packet
+        while _dax_running:
+            if not state['connected'] or not _dax_tx_streams:
+                time.sleep(0.1)
+                continue
+            with _tx_buf_lock:
+                available = _tx_write_pos[0] - _tx_read_pos[0]
+            if available >= tx_chunk:
+                with _tx_buf_lock:
+                    rp = _tx_read_pos[0]
+                    chunk = np.array([_tx_buf[(rp + i) % buf_len] for i in range(tx_chunk)], dtype=np.float32)
+                    _tx_read_pos[0] = rp + tx_chunk
+                for ch, info in _dax_tx_streams.items():
+                    pkt = _build_vita49_tx_packet(info['stream_id'], chunk, seq)
+                    try:
+                        _dax_udp_sock.sendto(pkt, (state['radio_ip'], 4991))
+                    except Exception as e:
+                        log.debug(f'[DAX] TX send error: {e}')
+                seq = (seq + 1) & 0xF
+            else:
+                time.sleep(0.004)  # ~4ms = ~96 samples at 24kHz
+
+    threading.Thread(target=_tx_sender_thread, daemon=True).start()
+    log.info('[DAX] Audio bridge running')
+
+def setup_dax_streams():
+    """Register UDP port with SmartSDR and create DAX audio streams.
+    Called after SmartSDR connection is established."""
+    if not _dax_udp_sock or not state['connected']:
+        return
+    udp_port = _dax_udp_sock.getsockname()[1]
+    log.info(f'[DAX] Registering UDP port {udp_port} with SmartSDR')
+    radio.cmd(f'client udpport {udp_port}')
+    time.sleep(0.5)
+    for ch in DAX_CHANNELS:
+        sl = state['slice']
+        # Create DAX RX stream — capture stream ID from response
+        def _on_rx_stream(msg, _ch=ch):
+            try:
+                sid = int(msg.strip(), 16)
+                _dax_rx_streams[_ch] = {'stream_id': sid}
+                log.info(f'[DAX] RX stream created: channel={_ch}, stream_id=0x{sid:08X}')
+            except ValueError:
+                log.warning(f'[DAX] Could not parse RX stream ID: {msg}')
+        log.info(f'[DAX] Creating DAX RX stream: channel={ch}, slice={sl}')
+        seq = radio.cmd(f'stream create type=dax_rx dax_channel={ch}')
+        if seq is not None:
+            radio.handlers[str(seq)] = _on_rx_stream
+        time.sleep(0.5)
+
+        # Create DAX TX stream
+        def _on_tx_stream(msg, _ch=ch):
+            try:
+                sid = int(msg.strip(), 16)
+                _dax_tx_streams[_ch] = {'stream_id': sid}
+                log.info(f'[DAX] TX stream created: channel={_ch}, stream_id=0x{sid:08X}')
+            except ValueError:
+                log.warning(f'[DAX] Could not parse TX stream ID: {msg}')
+        log.info(f'[DAX] Creating DAX TX stream: channel={ch}')
+        seq = radio.cmd(f'stream create type=dax_tx dax_channel={ch}')
+        if seq is not None:
+            radio.handlers[str(seq)] = _on_tx_stream
+        time.sleep(0.5)
+
+        # Assign DAX channel to our slice
+        radio.cmd(f'dax audio set {ch} slice={sl} tx=1')
+    log.info('[DAX] Stream setup complete')
+
 # ── Auto-connect if IP provided ────────────────────────────────────────────────
 def auto_connect():
     if args.radio:
         log.info(f'Auto-connecting to {args.radio}...')
         time.sleep(1)  # brief pause for REST API to start
         radio.connect(args.radio)
+        # After connection, set up DAX streams
+        time.sleep(2)  # wait for SmartSDR registration to complete
+        if state['connected']:
+            setup_dax_streams()
     else:
         log.info('No --radio specified, waiting for /radio/connect call or auto-discovery')
 
@@ -818,6 +1367,7 @@ if __name__ == '__main__':
     start_rest_api()       # REST up first — browser can poll immediately
     start_pty_server()
     start_tcp_cat_server()
+    start_dax_audio()      # DAX audio bridge (VITA-49 ↔ BlackHole)
 
     # Start discovery after REST API is bound
     threading.Thread(target=auto_connect, daemon=True).start()
@@ -825,6 +1375,7 @@ if __name__ == '__main__':
     log.info(f'PTY symlink:  {PTY_SYMLINK}')
     log.info(f'TCP CAT:      127.0.0.1:{args.cat_port}')
     log.info(f'REST API:     http://127.0.0.1:{args.status_port}')
+    log.info(f'DAX audio:    BlackHole 2ch (channels={DAX_CHANNELS})')
     log.info('Ready. Press Ctrl+C to stop.')
 
     try:

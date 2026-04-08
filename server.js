@@ -35,7 +35,7 @@ const CFG_PATH = path.join(__dirname, 'config.json');
 
 function loadConfig() {
   try { return JSON.parse(fs.readFileSync(CFG_PATH, 'utf8')); }
-  catch { return { callsign:'NOCALL', operatorId:'OP1', operators:[], network:{}, backup:{}, clublog:{}, cat:{} }; }
+  catch { return { callsign:'VK0EK', operatorId:'OP1', operators:[], network:{}, backup:{}, clublog:{}, cat:{} }; }
 }
 
 let config = loadConfig();
