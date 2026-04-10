@@ -32,6 +32,7 @@ Team Leader is a real-time QSO logging system built for multi-operator DXpeditio
 - **Real-time sync** — log on one station, see it everywhere instantly
 - **Network-wide dupe checking** — prevents duplicates across all operators
 - **FlexRadio integration** — native SmartSDR API support via FlexBridge
+- **TCI digimode bridge** — JTDX / MSHV / WSJT-X Improved connect directly to the radio, no BlackHole or virtual audio driver required
 - **USB backup** — automatic ADIF export to USB drives every 5 minutes
 - **Runs anywhere** — macOS, Linux, web browser, or native Electron app
 - **Minimal dependencies** — only 3 npm packages (sql.js, uuid, ws)
@@ -157,6 +158,31 @@ Native support for FlexRadio 6000 series via the SmartSDR API. FlexBridge connec
 
 ---
 
+### TCI Digimode Bridge (new)
+
+FlexBridge now exposes an **Expert Electronics TCI v1.9** WebSocket server on
+`ws://127.0.0.1:40001`. This lets TCI-aware digimode clients — **JTDX**,
+**MSHV**, and **WSJT-X Improved (DG2YCB)** — talk to the FlexRadio directly.
+
+- **No virtual audio driver** — RX audio is streamed as TCI binary frames and
+  TX audio flows back the same way. BlackHole, Loopback, and VB-Cable are no
+  longer required.
+- **CAT over the same socket** — frequency, mode, and T/R control share the
+  TCI connection, so there's nothing extra to configure.
+- **Radio ↔ client sync** — tuning the radio from SmartSDR or the logger
+  pushes VFO and mode updates to all connected TCI clients automatically.
+- **RX gain slider** — Settings → FlexBridge tab has a **TCI RX Audio Gain**
+  slider (−40 dB … +20 dB, default −15 dB). Drag until WSJT-X's audio meter
+  sits in the green.
+- **macOS 26 friendly** — the legacy BlackHole sounddevice sink is disabled
+  by default (it's broken on macOS 26). Pass `--enable-blackhole` to
+  `flexbridge.py` to opt back in if you need the old behavior.
+
+To connect from a TCI client, point its TCI address at `127.0.0.1:40001`
+(or the LAN IP of whichever station is running FlexBridge).
+
+---
+
 ### CW / ESM Mode (Enter Sends Message)
 
 <!-- ![CW Mode](docs/screenshots/cw-mode.png) -->
@@ -210,6 +236,11 @@ Automatic FT8 logging from WSJT-X:
 - **Auto-launch** — optionally start WSJT-X when switching to FT8 mode
 
 Configure in WSJT-X: **File > Settings > Reporting** — enable UDP server, set port to 2237.
+
+> **Tip:** If you use **JTDX**, **MSHV**, or **WSJT-X Improved**, skip the
+> audio device setup entirely and connect via the new
+> [TCI Digimode Bridge](#tci-digimode-bridge-new) — FlexBridge handles both
+> CAT and audio over a single WebSocket connection.
 
 ---
 
@@ -335,16 +366,17 @@ npm run build:all      # Both platforms
 
 ### Network Ports
 
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| 7375 | HTTP | Web interface + REST API |
-| 7373 | WebSocket | Browser real-time updates |
-| 7374 | WebSocket | Peer-to-peer QSO sync |
-| 7376 | HTTP | FlexBridge REST API |
-| 4532 | TCP | rigctld CAT control |
-| 4992 | UDP/TCP | SmartSDR API (FlexRadio) |
-| 2237 | UDP | WSJT-X QSO input |
-| 5353 | UDP | mDNS peer discovery |
+| Port  | Protocol  | Purpose |
+|-------|-----------|---------|
+| 7375  | HTTP      | Web interface + REST API |
+| 7373  | WebSocket | Browser real-time updates |
+| 7374  | WebSocket | Peer-to-peer QSO sync |
+| 7376  | HTTP      | FlexBridge REST API |
+| 40001 | WebSocket | FlexBridge TCI server (digimode clients) |
+| 4532  | TCP       | rigctld CAT control |
+| 4992  | UDP/TCP   | SmartSDR API (FlexRadio) |
+| 2237  | UDP       | WSJT-X QSO input |
+| 5353  | UDP       | mDNS peer discovery |
 
 ---
 

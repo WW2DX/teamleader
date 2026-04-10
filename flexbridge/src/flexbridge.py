@@ -41,6 +41,11 @@ parser.add_argument('--cat-port',    type=int, default=4532, help='TCP CAT port 
 parser.add_argument('--dax-channels', default='1',  help='Comma-separated DAX channel numbers')
 parser.add_argument('--status-port', type=int, default=7376, help='REST status API port')
 parser.add_argument('--cat-slice',   type=int, default=0,    help='Slice index for CAT (0=A)')
+parser.add_argument('--tci-port',    type=int, default=40001, help='TCI WebSocket server port (0 to disable)')
+parser.add_argument('--tci-rx-gain-db', type=float, default=-15.0,
+                    help='RX audio gain in dB applied before TCI streaming (default -15)')
+parser.add_argument('--enable-blackhole', action='store_true',
+                    help='Also feed RX/TX audio through BlackHole sounddevice (legacy, broken on macOS 26)')
 args = parser.parse_args()
 
 DAX_CHANNELS = [int(c.strip()) for c in args.dax_channels.split(',') if c.strip()]
@@ -251,17 +256,36 @@ class SmartSDR:
             pairs = re.findall(r'(\w+)=(\S+)', m.group(2))
             # Don't let incoming status overwrite state right after we sent a command
             in_holdoff = (_time.monotonic() - _last_set_time) < _HOLDOFF_SECS
+            freq_changed = False
+            mode_changed = False
             for k, v in pairs:
                 if k == 'RF_frequency' and not in_holdoff:
                     try:
                         hz = round(float(v) * 1_000_000)
+                        if hz != state['freq_hz']:
+                            freq_changed = True
                         state['freq_hz']    = hz
                         state['tx_freq_hz'] = hz
                         state['rx_freq_hz'] = hz
                     except ValueError:
                         pass
                 elif k == 'mode' and not in_holdoff:
-                    state['mode'] = v.upper()
+                    new_mode = v.upper()
+                    if new_mode != state['mode']:
+                        mode_changed = True
+                    state['mode'] = new_mode
+            # Push state changes to any connected TCI clients
+            if freq_changed:
+                try:
+                    tci_broadcast_threadsafe(f'vfo:0,0,{state["freq_hz"]};')
+                    tci_broadcast_threadsafe(f'dds:0,{state["freq_hz"]};')
+                except NameError:
+                    pass
+            if mode_changed:
+                try:
+                    tci_broadcast_threadsafe(f'modulation:0,{_flex_to_tci_mode(state["mode"]).lower()};')
+                except NameError:
+                    pass
             return
         # dax_audio_stream / audio_stream status — track stream IDs
         m = re.match(r'^audio_stream (\S+) (.+)$', body)
@@ -892,6 +916,13 @@ class FlexBridgeAPI(BaseHTTPRequestHandler):
                 'slice':            state['slice'],
                 'cat':              state['cat'],
                 'dax':              {str(k): v for k, v in state['dax'].items()},
+                'tci': {
+                    'enabled': args.tci_port > 0,
+                    'port':    args.tci_port if args.tci_port > 0 else None,
+                    'clients': len(_tci_clients),
+                    'rx_gain_db': round(20 * _math.log10(_tci_rx_gain[0]), 2) if _tci_rx_gain[0] > 0 else None,
+                    'rx_gain_linear': round(_tci_rx_gain[0], 6),
+                },
             }
             self._send(200, status)
 
@@ -984,6 +1015,28 @@ class FlexBridgeAPI(BaseHTTPRequestHandler):
                 radio.cwx_set_speed(int(wpm))
             self._send(200, {'ok': True, 'wpm': wpm})
 
+        elif path == '/tci/gain':
+            # Set RX audio gain. Body: {db: -15} or {linear: 0.18}
+            if 'db' in body:
+                try:
+                    db = float(body['db'])
+                    _tci_rx_gain[0] = 10 ** (db / 20.0)
+                    self._send(200, {'ok': True, 'db': db, 'linear': round(_tci_rx_gain[0], 6)})
+                except (TypeError, ValueError):
+                    self._send(400, {'ok': False, 'error': 'db must be a number'})
+            elif 'linear' in body:
+                try:
+                    lin = float(body['linear'])
+                    if lin <= 0:
+                        self._send(400, {'ok': False, 'error': 'linear must be > 0'})
+                        return
+                    _tci_rx_gain[0] = lin
+                    self._send(200, {'ok': True, 'linear': lin, 'db': round(20 * _math.log10(lin), 2)})
+                except (TypeError, ValueError):
+                    self._send(400, {'ok': False, 'error': 'linear must be a number'})
+            else:
+                self._send(400, {'ok': False, 'error': 'send {"db": <n>} or {"linear": <n>}'})
+
         else:
             self._send(404, {'error': 'not found'})
 
@@ -995,10 +1048,62 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
     allow_reuse_address = True  # SO_REUSEADDR — lets us rebind immediately after crash/restart
 
+def _kill_stale_flexbridge(port):
+    """If another flexbridge.py instance still owns this port (orphaned by a
+    crashed parent), terminate it so we can rebind. Only kills processes whose
+    command line clearly identifies them as flexbridge to avoid collateral damage."""
+    import subprocess
+    try:
+        out = subprocess.check_output(
+            ['lsof', '-nP', '-iTCP:%d' % port, '-sTCP:LISTEN', '-Fp'],
+            stderr=subprocess.DEVNULL, text=True, timeout=2,
+        )
+    except Exception:
+        return False
+    pids = [int(line[1:]) for line in out.splitlines() if line.startswith('p')]
+    killed = False
+    for pid in pids:
+        if pid == os.getpid():
+            continue
+        try:
+            cmdline = subprocess.check_output(
+                ['ps', '-p', str(pid), '-o', 'command='],
+                stderr=subprocess.DEVNULL, text=True, timeout=2,
+            ).strip()
+        except Exception:
+            continue
+        if 'flexbridge.py' not in cmdline:
+            log.warning(f'Port {port} held by non-flexbridge pid {pid}: {cmdline[:80]}')
+            continue
+        log.warning(f'Killing stale flexbridge pid {pid} holding port {port}')
+        try:
+            os.kill(pid, 15)  # SIGTERM
+            time.sleep(0.4)
+            try:
+                os.kill(pid, 0)  # still alive?
+                os.kill(pid, 9)  # SIGKILL
+                time.sleep(0.2)
+            except ProcessLookupError:
+                pass
+            killed = True
+        except Exception as e:
+            log.warning(f'Failed to kill pid {pid}: {e}')
+    return killed
+
 def start_rest_api():
     # Bind to 127.0.0.1 explicitly — avoids IPv4/IPv6 dual-stack confusion on macOS
     # where 'localhost' resolves to ::1 but 0.0.0.0 only binds IPv4
-    srv = ThreadedHTTPServer(('127.0.0.1', args.status_port), FlexBridgeAPI)
+    try:
+        srv = ThreadedHTTPServer(('127.0.0.1', args.status_port), FlexBridgeAPI)
+    except OSError as e:
+        if e.errno != 48:  # EADDRINUSE
+            raise
+        log.warning(f'Port {args.status_port} in use — checking for stale flexbridge')
+        if _kill_stale_flexbridge(args.status_port):
+            time.sleep(0.3)
+            srv = ThreadedHTTPServer(('127.0.0.1', args.status_port), FlexBridgeAPI)
+        else:
+            raise
     try:
         srv.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
     except (AttributeError, OSError):
@@ -1029,6 +1134,20 @@ _dax_rx_streams = {}   # dax_channel -> {'stream_id': int, 'udp_port': int}
 _dax_tx_streams = {}   # dax_channel -> {'stream_id': int}
 _dax_udp_sock   = None
 _dax_running    = False
+
+# ── DAX ring buffers (module-level so TCI server can read/write directly) ─────
+# RX: VITA-49 UDP packets → _rx_buf (24 kHz mono float32) → consumers
+# TX: producers write to _tx_buf → _tx_sender_thread → VITA-49 UDP to radio
+import numpy as _np
+_buf_len       = DAX_SAMPLE_RATE * 2  # 2 seconds
+_rx_buf        = _np.zeros(_buf_len, dtype=_np.float32)
+_rx_buf_lock   = threading.Lock()
+_rx_write_pos  = [0]
+_rx_read_pos   = [0]   # used by BlackHole sink (kept for back-compat)
+_tx_buf        = _np.zeros(_buf_len, dtype=_np.float32)
+_tx_buf_lock   = threading.Lock()
+_tx_write_pos  = [0]
+_tx_read_pos   = [0]
 
 def _find_blackhole_device():
     """Find BlackHole 2ch device index."""
@@ -1128,26 +1247,15 @@ def _build_vita49_tx_packet(stream_id, samples, seq_counter):
     return header + payload + trailer
 
 def start_dax_audio():
-    """Start DAX audio bridge: receive VITA-49 RX audio → BlackHole out,
-    capture BlackHole in → VITA-49 TX audio back to radio."""
+    """Start DAX audio I/O: VITA-49 UDP receiver, ring buffers, TX sender.
+    Uses module-level _rx_buf / _tx_buf so consumers like the TCI server
+    can pull/push samples in parallel.
+
+    The BlackHole sounddevice sink is set up only if the device is present;
+    failures are non-fatal — DAX I/O still works for TCI clients without it.
+    """
     global _dax_udp_sock, _dax_running
-
-    try:
-        import sounddevice as sd
-        import numpy as np
-    except ImportError as e:
-        log.warning(f'[DAX] Cannot start audio bridge — missing module: {e}')
-        log.warning('[DAX] Install with: pip3 install sounddevice numpy')
-        return
-
-    bh_idx = _find_blackhole_device()
-    if bh_idx is None:
-        log.warning('[DAX] BlackHole 2ch not found — DAX audio bridge disabled')
-        log.warning('[DAX] Install BlackHole: brew install --cask blackhole-2ch')
-        return
-
-    bh_name = sd.query_devices(bh_idx)['name']
-    log.info(f'[DAX] Using audio device: {bh_name} (index {bh_idx})')
+    import numpy as np
 
     # Bind UDP socket for VITA-49 audio
     _dax_udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1162,22 +1270,28 @@ def start_dax_audio():
     _dax_udp_sock.settimeout(0.1)
     log.info(f'[DAX] UDP listener on port {udp_port}')
 
-    # Ring buffer for RX audio: VITA-49 packets → BlackHole output
-    _rx_buf_lock = threading.Lock()
-    _rx_buf = np.zeros(DAX_SAMPLE_RATE * 2, dtype=np.float32)  # 2-second ring
-    _rx_write_pos = [0]
-    _rx_read_pos  = [0]
-
-    # TX audio ring buffer: BlackHole input → VITA-49 packets
-    _tx_buf_lock = threading.Lock()
-    _tx_buf = np.zeros(DAX_SAMPLE_RATE * 2, dtype=np.float32)
-    _tx_write_pos = [0]
-    _tx_read_pos  = [0]
-
     _dax_running = True
-    buf_len = len(_rx_buf)
+    buf_len = _buf_len  # alias for inner closures
     _output_callbacks = [0]  # debug counter
     _underruns = [0]
+
+    # Try to set up BlackHole sounddevice sink (legacy — broken on macOS 26,
+    # disabled by default; pass --enable-blackhole to opt in). DAX I/O still
+    # works for TCI clients without it.
+    sd = None
+    bh_idx = None
+    if args.enable_blackhole:
+        try:
+            import sounddevice as sd
+            bh_idx = _find_blackhole_device()
+            if bh_idx is None:
+                log.info('[DAX] BlackHole 2ch not present — skipping sounddevice sink')
+                sd = None
+        except ImportError:
+            log.info('[DAX] sounddevice not installed — skipping BlackHole sink')
+            sd = None
+    else:
+        log.info('[DAX] BlackHole sink disabled (use --enable-blackhole to opt in); TCI is the audio path')
 
     def _udp_rx_thread():
         """Receive VITA-49 DAX RX packets and write PCM to ring buffer."""
@@ -1247,32 +1361,33 @@ def start_dax_audio():
                 _tx_buf[:n - split] = left[split:]
             _tx_write_pos[0] = wp + n
 
-    # Start sounddevice streams
-    try:
-        out_stream = sd.OutputStream(
-            device=bh_idx,
-            samplerate=DAX_SAMPLE_RATE,
-            channels=2,
-            dtype='float32',
-            blocksize=DAX_BLOCK_SIZE,
-            callback=_audio_output_callback,
-        )
-        in_stream = sd.InputStream(
-            device=bh_idx,
-            samplerate=DAX_SAMPLE_RATE,
-            channels=2,
-            dtype='float32',
-            blocksize=DAX_BLOCK_SIZE,
-            callback=_audio_input_callback,
-        )
-        out_stream.start()
-        in_stream.start()
-        log.info(f'[DAX] Audio streams started (rate={DAX_SAMPLE_RATE}, device={bh_name})')
-    except Exception as e:
-        log.error(f'[DAX] Failed to start audio streams: {e}')
-        return
+    # Start sounddevice BlackHole streams (optional — only if BlackHole is found)
+    if sd is not None and bh_idx is not None:
+        try:
+            bh_name = sd.query_devices(bh_idx)['name']
+            out_stream = sd.OutputStream(
+                device=bh_idx,
+                samplerate=DAX_SAMPLE_RATE,
+                channels=2,
+                dtype='float32',
+                blocksize=DAX_BLOCK_SIZE,
+                callback=_audio_output_callback,
+            )
+            in_stream = sd.InputStream(
+                device=bh_idx,
+                samplerate=DAX_SAMPLE_RATE,
+                channels=2,
+                dtype='float32',
+                blocksize=DAX_BLOCK_SIZE,
+                callback=_audio_input_callback,
+            )
+            out_stream.start()
+            in_stream.start()
+            log.info(f'[DAX] BlackHole streams started (rate={DAX_SAMPLE_RATE}, device={bh_name})')
+        except Exception as e:
+            log.warning(f'[DAX] BlackHole streams unavailable ({e}) — continuing without sounddevice sink')
 
-    # Start UDP receiver thread
+    # Start UDP receiver thread (always — feeds the ring buffer for all consumers)
     threading.Thread(target=_udp_rx_thread, daemon=True).start()
 
     # TX sender thread — reads from TX ring buffer and sends VITA-49 to radio
@@ -1346,6 +1461,535 @@ def setup_dax_streams():
         radio.cmd(f'dax audio set {ch} slice={sl} tx=1')
     log.info('[DAX] Stream setup complete')
 
+# ── TCI (Transceiver Control Interface) WebSocket server ──────────────────────
+# Implements the Expert Electronics TCI v1.9 protocol so TCI-aware digimode
+# clients (JTDX, MSHV, WSJT-X Improved) can connect directly with no virtual
+# audio driver. Text frames carry CAT commands, binary frames carry audio.
+# Spec: https://github.com/ExpertSDR3/TCI
+
+import asyncio
+
+TCI_STREAM_IQ        = 0
+TCI_STREAM_RX_AUDIO  = 1
+TCI_STREAM_TX_AUDIO  = 2
+TCI_STREAM_TX_CHRONO = 3
+TCI_STREAM_LINEOUT   = 4
+
+TCI_FORMAT_INT16   = 0
+TCI_FORMAT_INT24   = 1
+TCI_FORMAT_INT32   = 2
+TCI_FORMAT_FLOAT32 = 3
+
+_tci_loop    = None
+_tci_clients = set()
+# Linear gain applied to RX audio before TCI binary frames are sent.
+# Initialised from --tci-rx-gain-db at startup; mutable at runtime via REST.
+import math as _math
+_tci_rx_gain = [10 ** (args.tci_rx_gain_db / 20.0)]
+
+# Per-mode FlexRadio ↔ TCI translation. TCI uses USB/LSB/CW/AM/NFM/DIGU/DIGL.
+def _flex_to_tci_mode(mode):
+    return {'USB':'USB','LSB':'LSB','CW':'CW','CW-R':'CW','AM':'AM',
+            'FM':'NFM','NFM':'NFM','DIGU':'DIGU','DIGL':'DIGL',
+            'RTTY':'DIGL','FSK':'DIGL'}.get(mode, 'USB')
+
+def _tci_to_flex_mode(mode):
+    m = mode.upper()
+    return {'USB':'USB','LSB':'LSB','CW':'CW','AM':'AM','SAM':'AM','DSB':'AM',
+            'NFM':'FM','WFM':'FM','DIGU':'DIGU','DIGL':'DIGL'}.get(m, 'USB')
+
+def _resample_linear(samples, in_rate, out_rate):
+    """Linear-interpolation resample. Adequate for FT8 audio in a 3 kHz band."""
+    import numpy as np
+    if in_rate == out_rate or len(samples) == 0:
+        return samples
+    n_in = len(samples)
+    n_out = max(1, int(round(n_in * out_rate / in_rate)))
+    if n_out == n_in:
+        return samples
+    idx = np.linspace(0, n_in - 1, n_out, dtype=np.float64)
+    return np.interp(idx, np.arange(n_in, dtype=np.float64), samples).astype(np.float32)
+
+def _build_tci_audio_frame(receiver, sample_rate, samples_mono, channels,
+                            stream_type, sample_format=TCI_FORMAT_FLOAT32):
+    """Build a TCI binary stream frame: 64-byte header + interleaved samples.
+
+    Header layout (all little-endian uint32):
+        receiver, sample_rate, format, codec, crc, length, type, channels,
+        then 32 bytes (8×u32) reserved padding.
+    `length` is the count of real samples in data[] (= n_samples × channels).
+    """
+    import numpy as np
+    if channels == 2:
+        # Duplicate mono → interleaved stereo
+        interleaved = np.empty(len(samples_mono) * 2, dtype=np.float32)
+        interleaved[0::2] = samples_mono
+        interleaved[1::2] = samples_mono
+    else:
+        interleaved = samples_mono.astype(np.float32, copy=False)
+
+    if sample_format == TCI_FORMAT_FLOAT32:
+        sample_bytes = interleaved.astype('<f4').tobytes()
+    elif sample_format == TCI_FORMAT_INT16:
+        sample_bytes = (np.clip(interleaved, -1.0, 1.0) * 32767.0).astype('<i2').tobytes()
+    elif sample_format == TCI_FORMAT_INT32:
+        sample_bytes = (np.clip(interleaved, -1.0, 1.0) * 2147483647.0).astype('<i4').tobytes()
+    else:
+        sample_bytes = interleaved.astype('<f4').tobytes()
+
+    length = len(interleaved)
+    header = struct.pack('<8I',
+        receiver, sample_rate, sample_format, 0, 0, length, stream_type, channels,
+    ) + b'\x00' * 32
+    return header + sample_bytes
+
+def _parse_tci_audio_frame(data):
+    """Parse a TCI binary frame. Returns (header_dict, samples_mono_float32)."""
+    import numpy as np
+    if len(data) < 64:
+        return None, None
+    fields = struct.unpack_from('<8I', data, 0)
+    header = {
+        'receiver':    fields[0],
+        'sample_rate': fields[1],
+        'format':      fields[2],
+        'codec':       fields[3],
+        'crc':         fields[4],
+        'length':      fields[5],
+        'type':        fields[6],
+        'channels':    fields[7],
+    }
+    payload = data[64:]
+    fmt = header['format']
+    if fmt == TCI_FORMAT_FLOAT32:
+        all_samples = np.frombuffer(payload, dtype='<f4')
+    elif fmt == TCI_FORMAT_INT16:
+        all_samples = np.frombuffer(payload, dtype='<i2').astype(np.float32) / 32768.0
+    elif fmt == TCI_FORMAT_INT32:
+        all_samples = np.frombuffer(payload, dtype='<i4').astype(np.float32) / 2147483648.0
+    else:
+        return header, None
+    ch = header['channels']
+    if ch == 2 and len(all_samples) >= 2:
+        mono = all_samples[0::2].copy()
+    else:
+        mono = all_samples.copy() if hasattr(all_samples, 'copy') else all_samples
+    return header, mono
+
+
+class TCIClientSession:
+    """One TCI client connection. Owns its own audio sender / TX-chrono tasks."""
+    def __init__(self, ws):
+        self.ws = ws
+        self.peer = None
+        # Audio negotiation defaults (per TCI spec)
+        self.audio_sample_rate = 48000
+        self.audio_channels    = 2
+        self.audio_samples_per_frame = 1024
+        self.audio_format      = TCI_FORMAT_FLOAT32
+        self.audio_streaming   = False
+        self.audio_task        = None
+        # TX state
+        self.tx_active         = False
+        self.tx_use_tci_audio  = False
+        self.tx_chrono_task    = None
+        # Read pointer into _rx_buf — initialized when audio starts
+        self.rx_read_pos = 0
+
+    async def run(self):
+        global _tci_clients
+        _tci_clients.add(self)
+        self.peer = self.ws.remote_address
+        log.info(f'[TCI] Client connected: {self.peer}')
+        try:
+            await self._send_init()
+            async for message in self.ws:
+                if isinstance(message, (bytes, bytearray)):
+                    await self._handle_binary(bytes(message))
+                else:
+                    await self._handle_text(message)
+        except Exception as e:
+            log.debug(f'[TCI] {self.peer} closed: {e}')
+        finally:
+            self.audio_streaming = False
+            self.tx_active = False
+            self.tx_use_tci_audio = False
+            for t in (self.audio_task, self.tx_chrono_task):
+                if t is not None:
+                    t.cancel()
+            _tci_clients.discard(self)
+            log.info(f'[TCI] Client disconnected: {self.peer}')
+
+    async def send(self, msg):
+        try:
+            await self.ws.send(msg)
+        except Exception:
+            pass
+
+    async def _send_init(self):
+        # NOTE: WSJT-X Improved's TCI parser expects LOWERCASE command tokens.
+        # The TCI spec says commands are case-insensitive but the DG2YCB fork
+        # does a case-sensitive lookup on the wire token, so we send lowercase.
+        freq = state.get('freq_hz', 14074000)
+        mode = _flex_to_tci_mode(state.get('mode', 'USB')).lower()
+        init_lines = [
+            'protocol:ExpertSDR3,1.9;',
+            'device:FlexRadio6000;',
+            'receive_only:false;',
+            'trx_count:1;',
+            'channel_count:1;',
+            'channels_count:1;',
+            'vfo_limits:30000,75000000;',
+            'if_limits:-48000,48000;',
+            'modulations_list:lsb,usb,cw,digl,digu,am,nfm;',
+            f'dds:0,{freq};',
+            'if:0,0,0;',
+            f'vfo:0,0,{freq};',
+            f'vfo:0,1,{freq};',
+            f'modulation:0,{mode};',
+            'rx_filter_band:0,150,2700;',
+            'rit_enable:0,false;',
+            'rit_offset:0,0;',
+            'xit_enable:0,false;',
+            'xit_offset:0,0;',
+            'split_enable:0,false;',
+            'trx:0,false;',
+            'tune:0,false;',
+            'drive:0,50;',
+            'tune_drive:0,10;',
+            'rx_enable:0,true;',
+            'rx_channel_enable:0,1,false;',
+            'rx_volume:0,0,0;',
+            'rx_balance:0,0,0;',
+            'agc_mode:0,med;',
+            'agc_gain:0,80;',
+            'sql_enable:0,false;',
+            'sql_level:0,-80;',
+            'lock:0,false;',
+            'cw_macros_speed:25;',
+            'cw_macros_delay:10;',
+            'start;',
+            'ready;',
+        ]
+        for line in init_lines:
+            await self.send(line)
+        log.info(f'[TCI] Sent init burst ({len(init_lines)} lines) to {self.peer}')
+
+    async def _handle_text(self, msg):
+        msg = msg.strip()
+        if not msg.endswith(';'):
+            return
+        body = msg[:-1]
+        if ':' in body:
+            cmd, args_str = body.split(':', 1)
+            args = args_str.split(',') if args_str else []
+        else:
+            cmd, args = body, []
+        cmd_l = cmd.lower()
+        log.info(f'[TCI] {self.peer} → {cmd_l}({args})')
+
+        if cmd_l == 'vfo':
+            await self._cmd_vfo(args)
+        elif cmd_l == 'dds':
+            # Center the panorama on this freq — for our case treat like VFO read/echo
+            if len(args) >= 2:
+                await _tci_broadcast(f'dds:{args[0]},{args[1]};')
+            elif len(args) >= 1:
+                await self.send(f'dds:{args[0]},{state.get("freq_hz",14074000)};')
+        elif cmd_l == 'if':
+            # Passband offset within the panorama — echo for now
+            if len(args) >= 3:
+                await _tci_broadcast(f'if:{args[0]},{args[1]},{args[2]};')
+        elif cmd_l == 'modulation':
+            await self._cmd_modulation(args)
+        elif cmd_l == 'trx':
+            await self._cmd_trx(args)
+        elif cmd_l == 'tune':
+            if len(args) >= 2:
+                on = args[1].lower() == 'true'
+                if state['connected']:
+                    radio.cmd(f'transmit tune {1 if on else 0}')
+                await _tci_broadcast(f'tune:{args[0]},{"true" if on else "false"};')
+        elif cmd_l == 'rx_filter_band':
+            if len(args) >= 3:
+                await _tci_broadcast(f'rx_filter_band:{args[0]},{args[1]},{args[2]};')
+        elif cmd_l in ('rit_enable','xit_enable','split_enable','rit_offset',
+                       'xit_offset','drive','tune_drive','rx_volume','rx_balance',
+                       'volume','mute','agc_mode','agc_gain','sql_enable',
+                       'sql_level','lock','rx_enable','rx_channel_enable',
+                       'rx_clicked_on_spot','start','stop'):
+            # Acknowledge by echoing — MVP, no SmartSDR backing yet
+            await self.send(msg.lower())
+        elif cmd_l == 'audio_samplerate':
+            if args:
+                self.audio_sample_rate = int(args[0])
+            await self.send(f'audio_samplerate:{self.audio_sample_rate};')
+        elif cmd_l == 'audio_stream_channels':
+            if args:
+                self.audio_channels = int(args[0])
+            await self.send(f'audio_stream_channels:{self.audio_channels};')
+        elif cmd_l == 'audio_stream_samples':
+            if args:
+                self.audio_samples_per_frame = int(args[0])
+            await self.send(f'audio_stream_samples:{self.audio_samples_per_frame};')
+        elif cmd_l == 'audio_stream_sample_type':
+            if args:
+                t = args[0].lower()
+                self.audio_format = {'int16':TCI_FORMAT_INT16,'int24':TCI_FORMAT_INT24,
+                                     'int32':TCI_FORMAT_INT32,'float32':TCI_FORMAT_FLOAT32}.get(t, TCI_FORMAT_FLOAT32)
+            await self.send(f'audio_stream_sample_type:{["int16","int24","int32","float32"][self.audio_format]};')
+        elif cmd_l == 'audio_start':
+            await self._start_audio_stream()
+            await self.send(f'audio_start:{args[0] if args else "0"};')
+        elif cmd_l == 'audio_stop':
+            self.audio_streaming = False
+            if self.audio_task:
+                self.audio_task.cancel()
+                self.audio_task = None
+            await self.send(f'audio_stop:{args[0] if args else "0"};')
+        elif cmd_l in ('lineout_start','lineout_stop','iq_start','iq_stop',
+                       'iq_samplerate'):
+            # Echo for now — IQ stream not implemented in MVP
+            await self.send(msg.lower())
+        elif cmd_l in ('spot','spot_delete','spot_clear','cw_macros','cw_msg'):
+            # Spots / CW: rebroadcast to other clients
+            await _tci_broadcast(msg.lower(), exclude=self)
+        else:
+            # Per spec: silently ignore unknown commands
+            pass
+
+    async def _cmd_vfo(self, args):
+        # vfo:rx,chan; (read) | vfo:rx,chan,freq; (set)
+        if len(args) >= 3:
+            try:
+                freq = int(args[2])
+            except ValueError:
+                return
+            if state['connected']:
+                radio.set_freq(freq)
+            else:
+                state['freq_hz'] = freq
+                state['rx_freq_hz'] = freq
+                state['tx_freq_hz'] = freq
+            await _tci_broadcast(f'vfo:0,0,{freq};')
+            await _tci_broadcast(f'dds:0,{freq};')
+        elif len(args) >= 2:
+            await self.send(f'vfo:{args[0]},{args[1]},{state["freq_hz"]};')
+
+    async def _cmd_modulation(self, args):
+        if len(args) >= 2:
+            flex_mode = _tci_to_flex_mode(args[1])
+            if state['connected']:
+                radio.set_mode(flex_mode)
+            else:
+                state['mode'] = flex_mode
+            await _tci_broadcast(f'modulation:0,{_flex_to_tci_mode(flex_mode).lower()};')
+        elif len(args) >= 1:
+            await self.send(f'modulation:{args[0]},{_flex_to_tci_mode(state["mode"]).lower()};')
+
+    async def _cmd_trx(self, args):
+        # trx:rx; | trx:rx,true|false; | trx:rx,true,tci;
+        if len(args) >= 2:
+            on = args[1].lower() == 'true'
+            tci_audio = (len(args) >= 3 and args[2].lower() == 'tci')
+            self.tx_active = on
+            self.tx_use_tci_audio = on and tci_audio
+            if state['connected']:
+                radio.cmd(f'xmit {1 if on else 0}')
+            # Manage TX_CHRONO loop
+            if self.tx_use_tci_audio:
+                if self.tx_chrono_task:
+                    self.tx_chrono_task.cancel()
+                self.tx_chrono_task = asyncio.create_task(self._tx_chrono_loop())
+            else:
+                if self.tx_chrono_task:
+                    self.tx_chrono_task.cancel()
+                    self.tx_chrono_task = None
+            await _tci_broadcast(f'trx:0,{"true" if on else "false"};')
+        elif len(args) >= 1:
+            await self.send(f'trx:{args[0]},{"true" if self.tx_active else "false"};')
+
+    async def _start_audio_stream(self):
+        with _rx_buf_lock:
+            self.rx_read_pos = _rx_write_pos[0]
+        self.audio_streaming = True
+        if self.audio_task:
+            self.audio_task.cancel()
+        self.audio_task = asyncio.create_task(self._audio_sender())
+
+    async def _audio_sender(self):
+        """Pull from _rx_buf at DAX_SAMPLE_RATE, resample, send TCI binary frames."""
+        import numpy as np
+        target_rate = self.audio_sample_rate
+        client_frame = self.audio_samples_per_frame
+        # Native (DAX) samples needed per client frame
+        native_per_frame = max(1, int(round(client_frame * DAX_SAMPLE_RATE / target_rate)))
+        cadence = client_frame / target_rate  # seconds per outgoing frame
+        try:
+            while self.audio_streaming:
+                chunk_native = None
+                with _rx_buf_lock:
+                    avail = _rx_write_pos[0] - self.rx_read_pos
+                    if avail >= native_per_frame:
+                        # If we've fallen way behind (>1s), skip ahead
+                        if avail > _buf_len // 2:
+                            self.rx_read_pos = _rx_write_pos[0] - native_per_frame
+                        rp = self.rx_read_pos
+                        start = rp % _buf_len
+                        if start + native_per_frame <= _buf_len:
+                            chunk_native = _rx_buf[start:start + native_per_frame].copy()
+                        else:
+                            split = _buf_len - start
+                            chunk_native = np.concatenate(
+                                (_rx_buf[start:], _rx_buf[:native_per_frame - split])
+                            )
+                        self.rx_read_pos += native_per_frame
+
+                if chunk_native is not None:
+                    if target_rate == DAX_SAMPLE_RATE:
+                        chunk = chunk_native
+                    else:
+                        chunk = _resample_linear(chunk_native, DAX_SAMPLE_RATE, target_rate)
+                        if len(chunk) < client_frame:
+                            chunk = np.concatenate(
+                                [chunk, np.zeros(client_frame - len(chunk), dtype=np.float32)])
+                        elif len(chunk) > client_frame:
+                            chunk = chunk[:client_frame]
+                    # Apply RX gain (default -15 dB to keep WSJT levels in the green)
+                    g = _tci_rx_gain[0]
+                    if g != 1.0:
+                        chunk = chunk * np.float32(g)
+                    frame = _build_tci_audio_frame(
+                        receiver=0,
+                        sample_rate=target_rate,
+                        samples_mono=chunk,
+                        channels=self.audio_channels,
+                        stream_type=TCI_STREAM_RX_AUDIO,
+                        sample_format=self.audio_format,
+                    )
+                    try:
+                        await self.ws.send(frame)
+                    except Exception:
+                        break
+                else:
+                    await asyncio.sleep(cadence / 4)
+        except asyncio.CancelledError:
+            return
+        except Exception as e:
+            log.debug(f'[TCI] audio_sender error: {e}')
+
+    async def _tx_chrono_loop(self):
+        """Periodically push TX_CHRONO frames asking the client for ~10 ms of audio."""
+        import numpy as np
+        rate = self.audio_sample_rate
+        chunk_samples = max(64, rate // 100)  # ~10 ms
+        cadence = chunk_samples / rate
+        try:
+            while self.tx_active and self.tx_use_tci_audio:
+                empty = np.zeros(chunk_samples, dtype=np.float32)
+                frame = _build_tci_audio_frame(
+                    receiver=0,
+                    sample_rate=rate,
+                    samples_mono=empty,
+                    channels=1,
+                    stream_type=TCI_STREAM_TX_CHRONO,
+                    sample_format=TCI_FORMAT_FLOAT32,
+                )
+                try:
+                    await self.ws.send(frame)
+                except Exception:
+                    break
+                await asyncio.sleep(cadence)
+        except asyncio.CancelledError:
+            return
+
+    async def _handle_binary(self, data):
+        """Handle incoming TX audio binary frames from the client."""
+        import numpy as np
+        header, samples = _parse_tci_audio_frame(data)
+        if not header or samples is None:
+            return
+        if header['type'] != TCI_STREAM_TX_AUDIO:
+            return
+        # Resample to DAX rate (24 kHz)
+        if header['sample_rate'] != DAX_SAMPLE_RATE:
+            samples = _resample_linear(samples, header['sample_rate'], DAX_SAMPLE_RATE)
+        n = len(samples)
+        if n == 0:
+            return
+        with _tx_buf_lock:
+            wp = _tx_write_pos[0]
+            start = wp % _buf_len
+            if start + n <= _buf_len:
+                _tx_buf[start:start + n] = samples
+            else:
+                split = _buf_len - start
+                _tx_buf[start:] = samples[:split]
+                _tx_buf[:n - split] = samples[split:]
+            _tx_write_pos[0] = wp + n
+
+
+async def _tci_broadcast(msg, exclude=None):
+    """Send a text message to all connected TCI clients (for state sync)."""
+    for client in list(_tci_clients):
+        if client is exclude:
+            continue
+        try:
+            await client.ws.send(msg)
+        except Exception:
+            pass
+
+
+def tci_broadcast_threadsafe(msg):
+    """Schedule a TCI broadcast from a non-asyncio thread (e.g. SmartSDR reader)."""
+    if _tci_loop is None or not _tci_clients:
+        return
+    try:
+        asyncio.run_coroutine_threadsafe(_tci_broadcast(msg), _tci_loop)
+    except Exception:
+        pass
+
+
+async def _tci_handler(ws):
+    session = TCIClientSession(ws)
+    await session.run()
+
+
+def start_tci_server(port):
+    """Spawn the TCI WebSocket server in a daemon thread with its own asyncio loop."""
+    if port <= 0:
+        log.info('[TCI] Disabled (--tci-port 0)')
+        return
+    try:
+        import websockets  # noqa: F401
+    except ImportError:
+        log.warning('[TCI] websockets library not installed — pip install websockets')
+        return
+
+    def _run():
+        global _tci_loop
+        import websockets
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        _tci_loop = loop
+
+        async def _serve():
+            # max_size large enough for ~1024-sample float32 stereo audio frames
+            async with websockets.serve(_tci_handler, '127.0.0.1', port,
+                                          max_size=2 ** 20):
+                log.info(f'[TCI] WebSocket server listening on ws://127.0.0.1:{port}')
+                await asyncio.Future()  # run forever
+
+        try:
+            loop.run_until_complete(_serve())
+        except Exception as e:
+            log.error(f'[TCI] Server error: {e}')
+        finally:
+            loop.close()
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
 # ── Auto-connect if IP provided ────────────────────────────────────────────────
 def auto_connect():
     if args.radio:
@@ -1367,7 +2011,8 @@ if __name__ == '__main__':
     start_rest_api()       # REST up first — browser can poll immediately
     start_pty_server()
     start_tcp_cat_server()
-    start_dax_audio()      # DAX audio bridge (VITA-49 ↔ BlackHole)
+    start_dax_audio()      # DAX audio I/O (VITA-49 UDP + ring buffers)
+    start_tci_server(args.tci_port)  # TCI WebSocket server (control + audio)
 
     # Start discovery after REST API is bound
     threading.Thread(target=auto_connect, daemon=True).start()
@@ -1375,7 +2020,9 @@ if __name__ == '__main__':
     log.info(f'PTY symlink:  {PTY_SYMLINK}')
     log.info(f'TCP CAT:      127.0.0.1:{args.cat_port}')
     log.info(f'REST API:     http://127.0.0.1:{args.status_port}')
-    log.info(f'DAX audio:    BlackHole 2ch (channels={DAX_CHANNELS})')
+    log.info(f'DAX audio:    VITA-49 (channels={DAX_CHANNELS})')
+    if args.tci_port > 0:
+        log.info(f'TCI server:   ws://127.0.0.1:{args.tci_port}')
     log.info('Ready. Press Ctrl+C to stop.')
 
     try:

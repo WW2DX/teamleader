@@ -1539,4 +1539,43 @@ function autostartCatBridge() {
   console.log(`[CAT] cat-bridge started (${isFlexMode ? 'FlexBridge mode' : 'rigctld mode'}) PID ${proc.pid}`);
 }
 
+// ── Clean shutdown — kill spawned children so they don't orphan and hold ports ──
+let _shuttingDown = false;
+function gracefulShutdown(signal) {
+  if (_shuttingDown) return;
+  _shuttingDown = true;
+  console.log(`[Server] ${signal || 'shutdown'} — stopping child processes`);
+  const kids = [
+    ['FlexBridge', global._flexbridgeProc],
+    ['cat-bridge', global._catBridgeProc],
+    ['WSJT-X',     global._wsjtProc],
+  ];
+  for (const [name, proc] of kids) {
+    if (!proc || proc.killed) continue;
+    try {
+      proc.kill('SIGTERM');
+      console.log(`[Server] sent SIGTERM to ${name} pid=${proc.pid}`);
+    } catch (e) {
+      console.warn(`[Server] kill ${name} failed:`, e.message);
+    }
+  }
+  // Hard-kill any survivors after a brief grace period, then exit
+  setTimeout(() => {
+    for (const [name, proc] of kids) {
+      if (!proc || proc.killed) continue;
+      try { proc.kill('SIGKILL'); console.log(`[Server] SIGKILL ${name}`); } catch {}
+    }
+    process.exit(0);
+  }, 800).unref();
+}
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGHUP',  () => gracefulShutdown('SIGHUP'));
+// 'exit' fires on uncaught exit too — best-effort sync kill of children
+process.on('exit', () => {
+  for (const proc of [global._flexbridgeProc, global._catBridgeProc, global._wsjtProc]) {
+    if (proc && !proc.killed) { try { proc.kill('SIGKILL'); } catch {} }
+  }
+});
+
 boot().catch(err=>{console.error('Fatal:',err);process.exit(1);});

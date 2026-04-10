@@ -13,6 +13,30 @@ const APP_NAME     = 'Team Leader';
 const IS_MAC       = process.platform === 'darwin';
 const IS_LINUX     = process.platform === 'linux';
 
+// Override the macOS menu bar / dock label so it reads "Team Leader" instead
+// of "Electron" when running unpackaged (dev mode). Must be called before
+// app.whenReady() and before any BrowserWindow / Menu is created.
+app.setName(APP_NAME);
+if (IS_MAC) {
+  // Cocoa caches the process display name from argv[0] very early; setting
+  // process.title here updates the activity monitor / `ps` listing too.
+  process.title = APP_NAME;
+}
+
+// Customise the standard macOS About panel (triggered by the {role:'about'}
+// menu item). Linux/Windows ignore most of these fields and fall back to the
+// custom Help → About dialog further down.
+const PKG = require('../package.json');
+app.setAboutPanelOptions({
+  applicationName:    APP_NAME,
+  applicationVersion: PKG.version,
+  version:            `Build ${PKG.version}`,
+  copyright:          'Built by DXpeditioners, for DXpeditioners.\nVibe coded by WW2DX.',
+  credits:            'Multi-operator peer-mesh DXpedition logger.\nhttps://github.com/WW2DX/teamleader',
+  authors:            ['Lee J. Imber, WW2DX'],
+  website:            'https://github.com/WW2DX/teamleader',
+});
+
 // ── State ──────────────────────────────────────────────────────────────────────
 let mainWindow   = null;
 let tray         = null;
@@ -262,9 +286,14 @@ function buildMenu() {
         { label: 'About Team Leader', click: () => {
           dialog.showMessageBox(mainWindow, {
             type:    'info',
-            title:   'Team Leader',
-            message: 'Team Leader — DXpedition Logger',
-            detail:  'Built for DXpeditioners by DXpeditioners\n\nMulti-operator peer mesh logging system.\n\nBy WW2DX',
+            title:   'About Team Leader',
+            message: `Team Leader  v${PKG.version}`,
+            detail:  'DXpedition Logger\n\n' +
+                     'Built by DXpeditioners, for DXpeditioners.\n' +
+                     'Vibe coded by WW2DX.\n\n' +
+                     'Multi-operator peer-mesh logging system\n' +
+                     'with FlexRadio TCI, CW keyer, WSJT-X bridge,\n' +
+                     'and Clublog live streaming.',
             buttons: ['OK'],
           });
         }},

@@ -342,6 +342,22 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
           </div>
         </div>
 
+        <!-- TCI RX gain -->
+        <div class="field">
+          <label>TCI RX Audio Gain
+            <span id="tciGainVal" style="float:right;font-family:'Courier New',monospace;color:#1d4ed8;font-weight:700">−15 dB</span>
+          </label>
+          <div class="section-note" style="margin-bottom:8px">
+            Attenuation applied to RX audio sent over TCI to digimode clients (JTDX, MSHV, WSJT-X Improved). Adjust until WSJT's audio meter sits in the green.
+          </div>
+          <input type="range" id="tciGain" min="-40" max="20" step="1" value="-15"
+                 style="width:100%;accent-color:#2563eb;cursor:pointer"
+                 oninput="tciGainPreview(this.value)" onchange="tciGainSet(this.value)"/>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-top:2px;font-family:'Courier New',monospace">
+            <span>−40 dB</span><span>−20 dB</span><span>0 dB</span><span>+20 dB</span>
+          </div>
+        </div>
+
         <!-- Advanced -->
         <details style="margin-top:4px">
           <summary style="font-size:12px;font-weight:600;color:#374151;cursor:pointer;padding:8px 0;user-select:none">Advanced options</summary>
@@ -798,6 +814,15 @@ async function fbPoll() {
       statusOk = true;
       fbLog('OK — connected=' + d.connected);
       setFbStatus(d, true);
+      // Sync TCI gain slider from server (only if user isn't actively dragging)
+      if (d.tci && d.tci.rx_gain_db != null) {
+        const sl = document.getElementById('tciGain');
+        if (sl && document.activeElement !== sl) {
+          const db = Math.round(d.tci.rx_gain_db);
+          sl.value = db;
+          document.getElementById('tciGainVal').textContent = fmtGainDb(db);
+        }
+      }
     } else {
       fbLog('HTTP error: ' + r.status);
     }
@@ -1043,6 +1068,29 @@ function updateDaxStats(stats) {
     const el = document.getElementById(`dax-stat-${ch}`);
     if (el) { const on = s.rx_packets>0; el.textContent=on?`${s.rx_packets} pkts`:'idle'; el.className='dax-stat '+(on?'on':'off'); }
   }
+}
+
+// ── TCI RX gain slider ─────────────────────────────────────────────────
+function fmtGainDb(db) {
+  const n = Math.round(Number(db));
+  if (n === 0)  return '0 dB';
+  if (n  <  0)  return '\u2212' + Math.abs(n) + ' dB';   // U+2212 minus
+  return '+' + n + ' dB';
+}
+function tciGainPreview(v) {
+  document.getElementById('tciGainVal').textContent = fmtGainDb(v);
+}
+let _tciGainPostTimer = null;
+function tciGainSet(v) {
+  // Debounce so that drag-release fires once
+  if (_tciGainPostTimer) clearTimeout(_tciGainPostTimer);
+  _tciGainPostTimer = setTimeout(() => {
+    fetch(fbApiBase() + '/tci/gain', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ db: Number(v) })
+    }).catch(() => {});
+  }, 80);
 }
 
 // ── CAT test terminal ──────────────────────────────────────────────────
