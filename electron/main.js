@@ -358,9 +358,12 @@ async function updateFromGitHub() {
       buttons: ['OK'],
     });
 
-    // Restart: relaunch the app and quit the current instance
+    // Stop the server first so ports are released before the new process starts
+    stopServer();
+    // Brief delay for ports to fully release, then relaunch
+    await new Promise(r => setTimeout(r, 1000));
     app.relaunch();
-    app.quit();
+    app.exit(0);  // exit(0) is immediate — quit() can be blocked by event handlers
 
   } catch (err) {
     console.error('[Update] Failed:', err.message);
