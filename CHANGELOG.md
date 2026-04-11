@@ -2,6 +2,15 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.9.1] — 2026-04-11
+
+### Fixed
+- server.js crashed on `/api/icom/status` — leftover reference to
+  `_icomBridge` (old in-process variable) instead of
+  `global._icomBridgeProc` (child process).
+- Icom bridge process getting port 7377 "Address already in use" from
+  stale processes not cleaned up between restarts.
+
 ## [1.9.0] — 2026-04-11
 
 ### Changed

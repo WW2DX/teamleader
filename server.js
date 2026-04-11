@@ -1321,9 +1321,9 @@ function startHTTP() {
     }
 
     if (pathname==='/api/icom/status') {
-      const running = !!(_icomBridge && _icomBridge.connected);
+      const running = !!(global._icomBridgeProc && !global._icomBridgeProc.killed);
       res.writeHead(200,{'Content-Type':'application/json'});
-      return res.end(JSON.stringify({running, connected: running, radioIp: config.cat?.icom?.radioIp}));
+      return res.end(JSON.stringify({running, connected: _fbOnline, radioIp: config.cat?.icom?.radioIp}));
     }
 
     if (pathname==='/api/flexbridge/stop'&&req.method==='POST') {
