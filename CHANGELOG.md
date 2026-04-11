@@ -2,6 +2,12 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.10.1] — 2026-04-11
+
+### Fixed
+- `launch-mac.command` now launches Electron native app instead of the
+  old browser-only mode. Falls back to browser if Electron isn't installed.
+
 ## [1.10.0] — 2026-04-11
 
 ### Added
