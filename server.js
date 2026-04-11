@@ -15,7 +15,7 @@
 
 'use strict';
 
-const VERSION = '1.6.16';
+const VERSION = require('./package.json').version;
 
 // Detect if running inside Electron native app
 const IS_ELECTRON = !!process.env.ELECTRON_RUN;
