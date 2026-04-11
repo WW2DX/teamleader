@@ -761,7 +761,8 @@ function connectWS() {
       pendingQueue.forEach(q => ws.send(JSON.stringify({ type: 'LOG_QSO', qso: q })));
     }
     // Announce freq/mode/op so we appear in all other stations' op panels immediately
-    setTimeout(() => broadcastOpState(), 600);
+    // Broadcast state immediately so we appear in all op panels right away
+    broadcastOpState();
   };
 
   ws.onmessage = e => {
@@ -889,8 +890,6 @@ function handleMsg(msg) {
         });
         rebuildNetBar();
       }
-      // Remove any stale duplicate entries for the same callsign
-      purgeDuplicateCallsigns();
       applyPendingRates();
       break;
 
@@ -930,12 +929,12 @@ function handleMsg(msg) {
 
     case 'PEER_LIST_UPDATE':
       renderPeerList(msg.peers || []);
-      // Mark remote peer opStatus entries offline/remove when peer disconnects
+      // Mark remote peer opStatus entries offline (NOT delete) when peer disconnects
       {
         const onlinePeerOps = new Set((msg.peers || []).filter(p => !p.isSelf && p.online).map(p => p.operatorId));
         opStatus.forEach((info, sid) => {
-          if (info.isRemotePeer && !onlinePeerOps.has(info.operatorId || sid)) {
-            opStatus.delete(sid);
+          if (info.isRemotePeer) {
+            info.online = onlinePeerOps.has(info.operatorId || sid) || onlinePeerOps.has(info.callsign || sid);
           }
         });
         renderOpPanel();
@@ -1521,16 +1520,18 @@ function applyPendingRates() {
   }
 }
 
-function updateOpStatus(stationId, patch) {
-  const existing = opStatus.get(stationId) || {
-    callsign: stationId,
+function updateOpStatus(sid, patch) {
+  const existing = opStatus.get(sid) || {
+    callsign: sid,
     txFreq: null,
     rxFreq: null,
     mode: 'SSB',
     online: true,
     qsoTimes: []
   };
-  opStatus.set(stationId, { ...existing, ...patch });
+  const merged = { ...existing, ...patch };
+  opStatus.set(sid, merged);
+  console.log('[OpStatus]', sid, merged.callsign, merged.txFreq, merged.mode, merged.online ? 'ON' : 'OFF', merged.isRemotePeer ? 'REMOTE' : 'LOCAL', 'total=' + opStatus.size);
   renderOpPanel();
   checkBandConflict();
 }
@@ -1580,20 +1581,17 @@ function renderOpPanel() {
     return a[0].localeCompare(b[0]);
   });
 
-  // Only show rows for sessions that have announced themselves via OP_STATE
-  // (have a real freq/mode) or are our own session. Suppress bare placeholder
-  // entries from STATION_LIST that haven't broadcast any state yet.
-  // Also suppress entries whose callsign matches a raw stationId pattern (OP1, OP2 etc.)
-  const isStationId = (call) => /^OP\d+$/i.test(call) || /^STATION\d*$/i.test(call);
-
+  // Show all entries that are either: us, have a real callsign, or have a frequency.
+  // Only suppress bare placeholder entries (OP1, OP2) that have no callsign or freq.
   const filteredRows = rows.filter(([sid, s]) => {
     if (sid === me) return true;   // always show self
     const call = s.callsign || '';
-    if (isStationId(call)) return false;  // suppress OP1, OP2 etc.
-    // Show if they have announced freq/mode (real active session)
+    // Show if they have a frequency (active operator)
     if (s.txFreq) return true;
-    // Show if they have a real callsign (has letter+digit, not just default)
-    return call.length >= 3 && /[A-Z].*\d|\d.*[A-Z]/i.test(call);
+    // Show if they have a real callsign (contains letter+digit pattern like W1AW)
+    if (call.length >= 3 && /[A-Z].*\d|\d.*[A-Z]/i.test(call)) return true;
+    // Suppress bare placeholders (OP1, OP2, STATION1, etc.)
+    return false;
   });
 
   if (filteredRows.length === 0) {
@@ -3047,7 +3045,7 @@ async function boot() {
     broadcastOpState();
     sendWS({ type: 'PING' });
     checkRateDrop();
-  }, 60000);
+  }, 15000);
   // First rate check after 5 minutes
   setTimeout(checkRateDrop, 300000);
 
