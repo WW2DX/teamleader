@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.6.16-blue" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-1.7.0-blue" alt="Version"/>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey" alt="Platform"/>
   <img src="https://img.shields.io/badge/license-Copyright%20WW2DX-orange" alt="License"/>
   <img src="https://img.shields.io/badge/node-%3E%3D18-green" alt="Node"/>
@@ -347,6 +347,10 @@ Team Leader runs as a native app on macOS and Linux:
 - **System tray** — lives in the menu bar, double-click to show
 - **Native menus** — Cmd+, for Settings, Cmd+1/2 for Logger/Stats
 - **Auto-server** — the web server starts and stops with the app
+- **One-click update** — **Logger → Check for Updates** pulls the latest
+  code from GitHub, runs `npm install` if dependencies changed, and
+  restarts the app. Operators in the field can update in seconds without
+  touching the terminal
 
 ### Building Distributable Packages
 

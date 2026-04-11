@@ -236,6 +236,8 @@ function buildMenu() {
         { label: 'Statistics',    accelerator: IS_MAC ? 'Cmd+2' : 'Ctrl+2', click: openStats },
         { type: 'separator' },
         { label: 'Export ADIF',   click: () => mainWindow?.webContents.executeJavaScript('doExport && doExport()') },
+        { type: 'separator' },
+        { label: 'Check for Updates…', click: updateFromGitHub },
         ...(!IS_MAC ? [{ type: 'separator' }, { label: 'Quit', accelerator: 'Ctrl+Q', click: quitApp }] : []),
       ],
     },
@@ -304,6 +306,72 @@ function buildMenu() {
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+// ── Update from GitHub ────────────────────────────────────────────────────────
+async function updateFromGitHub() {
+  const { execSync } = require('child_process');
+  const repoDir = path.join(__dirname, '..');
+
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    title: 'Update Team Leader',
+    message: 'Pull latest from GitHub and restart?',
+    detail: 'This will:\n• git pull origin master\n• npm install (if needed)\n• Restart Team Leader\n\nMake sure you have network connectivity.',
+    buttons: ['Update & Restart', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (result.response !== 0) return;
+
+  // Show progress
+  if (mainWindow) {
+    mainWindow.webContents.executeJavaScript(
+      `document.title='Updating…'; document.body.style.opacity='0.5';`
+    ).catch(() => {});
+  }
+
+  try {
+    console.log('[Update] Pulling latest from GitHub…');
+    const pullOut = execSync('git pull origin master', {
+      cwd: repoDir, timeout: 30000, encoding: 'utf8',
+    }).trim();
+    console.log('[Update] git pull:', pullOut);
+
+    // Check if package.json changed (need npm install)
+    const diffOut = execSync('git diff HEAD~1 --name-only', {
+      cwd: repoDir, timeout: 5000, encoding: 'utf8',
+    }).trim();
+    if (diffOut.includes('package.json') || diffOut.includes('package-lock.json')) {
+      console.log('[Update] package.json changed — running npm install…');
+      execSync('npm install --production', {
+        cwd: repoDir, timeout: 60000, encoding: 'utf8',
+      });
+      console.log('[Update] npm install complete');
+    }
+
+    await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Complete',
+      message: 'Update successful — restarting now.',
+      detail: pullOut,
+      buttons: ['OK'],
+    });
+
+    // Restart: relaunch the app and quit the current instance
+    app.relaunch();
+    app.quit();
+
+  } catch (err) {
+    console.error('[Update] Failed:', err.message);
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(
+        `document.title='Team Leader'; document.body.style.opacity='1';`
+      ).catch(() => {});
+    }
+    dialog.showErrorBox('Update Failed',
+      `Could not update Team Leader:\n\n${err.message}\n\nCheck your network connection and try again.`);
+  }
 }
 
 // ── Quit ───────────────────────────────────────────────────────────────────────
