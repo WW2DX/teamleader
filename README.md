@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.10.2-blue" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-1.11.0-blue" alt="Version"/>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey" alt="Platform"/>
   <img src="https://img.shields.io/badge/license-Copyright%20WW2DX-orange" alt="License"/>
   <img src="https://img.shields.io/badge/node-%3E%3D18-green" alt="Node"/>
@@ -244,7 +244,9 @@ RS-BA1 / wfview) — no rigctld, no USB cable, no extra software.
 - **Frequency & mode tracking** — live VFO display in the logger, updated
   in real time via CI-V transceive and 400ms polling
 - **Frequency & mode control** — type a frequency or mode in the call box
-  and the IC-7610 follows, same as FlexRadio
+  and the radio follows, same as FlexRadio
+- **CW keying over network** — ESM mode and CW macros work over the LAN
+  connection, no USB cable needed. Speed control included
 - **Auto-reconnect** — if the network drops, the bridge reconnects
   automatically
 - **Same REST API** — uses the same `/status` and `/cat/command` interface

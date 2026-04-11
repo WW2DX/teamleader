@@ -2,6 +2,15 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.11.0] — 2026-04-11
+
+### Added
+- **CW keying over network for Icom radios** — icom-bridge.py now exposes
+  `/cwx/send`, `/cwx/clear`, and `/cwx/speed` endpoints using icom-lan's
+  `send_cw_text()`, `stop_cw_text()`, and `set_key_speed()`. ESM mode,
+  CW macros, and speed control all work over the LAN connection.
+- Band conflict TX inhibit is enforced at the CWX endpoint level.
+
 ## [1.10.2] — 2026-04-11
 
 ### Fixed

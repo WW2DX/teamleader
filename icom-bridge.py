@@ -240,6 +240,38 @@ class BridgeAPI(BaseHTTPRequestHandler):
                 return
             resp = handle_cat(cmd)
             self._send(200, {'ok': True, 'response': resp})
+
+        elif path == '/cwx/send':
+            text = body.get('text', '').strip()
+            if not text:
+                self._send(400, {'ok': False, 'error': 'No text'})
+                return
+            if state.get('tx_inhibit'):
+                self._send(403, {'ok': False, 'error': 'TX inhibited (band conflict)'})
+                return
+            if state['connected'] and radio and _loop:
+                asyncio.run_coroutine_threadsafe(radio.send_cw_text(text), _loop)
+                log.info(f'CW send: {text!r}')
+                self._send(200, {'ok': True})
+            else:
+                self._send(503, {'ok': False, 'error': 'Not connected'})
+
+        elif path == '/cwx/clear':
+            if state['connected'] and radio and _loop:
+                asyncio.run_coroutine_threadsafe(radio.stop_cw_text(), _loop)
+                log.info('CW stopped')
+            self._send(200, {'ok': True})
+
+        elif path == '/cwx/speed':
+            wpm = body.get('wpm')
+            if wpm is None:
+                self._send(400, {'ok': False, 'error': 'No wpm'})
+                return
+            if state['connected'] and radio and _loop:
+                asyncio.run_coroutine_threadsafe(radio.set_key_speed(int(wpm)), _loop)
+                log.info(f'CW speed: {wpm} WPM')
+            self._send(200, {'ok': True, 'wpm': int(wpm)})
+
         else:
             self._send(404, {'error': 'not found'})
 
