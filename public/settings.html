@@ -1278,14 +1278,21 @@ async function icomConnect() {
   const dot = document.getElementById('icom-dot');
   const txt = document.getElementById('icom-status-text');
   btn.disabled = true; btn.textContent = 'Connecting…';
-  dot.className = 'flex-dot pulse'; txt.textContent = 'Starting Icom bridge…';
-  // Save config first so server has the right IP/port
+  dot.className = 'flex-dot pulse'; txt.textContent = 'Stopping old bridge…';
+  // Stop any running bridge first
+  try { await fetch('/api/icom/stop', { method: 'POST' }); } catch {}
+  // Save config so server has the new IP/model/credentials
+  txt.textContent = 'Saving config…';
   try {
     await fetch('/api/settings', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ cat: { rigType: 'icom', icom: collectIcom() } }),
     });
   } catch {}
+  // Wait for old bridge to release ports
+  await new Promise(r => setTimeout(r, 1500));
+  // Start new bridge with updated config
+  txt.textContent = 'Starting Icom bridge…';
   try {
     const r = await fetch('/api/icom/start', { method: 'POST' });
     if (r.ok) {
@@ -1331,16 +1338,18 @@ async function icomPoll() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     if (d.connected || d.running) {
-      // Also get full status from the bridge REST API
+      // Get full status from the bridge REST API (model, freq, mode)
       const sr = await fetch('/api/fb/status').catch(() => null);
-      let freq = '?', mode = '?';
+      let freq = '?', mode = '?', model = document.getElementById('icom-model').value, ip = d.radioIp || '?';
       if (sr && sr.ok) {
         const sd = await sr.json();
         freq = (sd.freq_hz / 1e6).toFixed(3);
         mode = sd.mode || '?';
+        if (sd.radio_model) model = sd.radio_model;
+        if (sd.radio_ip) ip = sd.radio_ip;
       }
       dot.className = 'flex-dot ok';
-      txt.textContent = 'Connected to IC-7610 at ' + (d.radioIp || '?');
+      txt.textContent = 'Connected to ' + model + ' at ' + ip;
       meta.textContent = freq + ' MHz  ' + mode;
       bar.className = 'flex-status-bar connected';
       document.getElementById('icom-connect-btn').style.display = 'none';

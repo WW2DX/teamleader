@@ -2,6 +2,15 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.10.2] — 2026-04-11
+
+### Fixed
+- Icom Settings: Connect button now stops the old bridge, saves the new
+  config, waits for port release, then starts the new bridge. Previously
+  the old bridge kept running with stale IP/model settings.
+- Status banner showed hardcoded "IC-7610" regardless of selected model.
+  Now reads the actual radio_model from the bridge's /status response.
+
 ## [1.10.1] — 2026-04-11
 
 ### Fixed
