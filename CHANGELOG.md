@@ -2,6 +2,20 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.10.0] — 2026-04-11
+
+### Added
+- **Multi-model Icom support** — Settings page now has a Radio Model
+  dropdown: IC-7610, IC-7300/MKII, IC-9700, IC-705, IC-7851, IC-R8600.
+  CI-V address auto-sets when you pick a model.
+- `--model` argument for icom-bridge.py, passed through to icom-lan
+  for model-specific command support.
+
+### Changed
+- Settings tab renamed from "Icom IC-7610" to "Icom (Network)" to
+  reflect broader radio support.
+- README updated to list all supported Icom models.
+
 ## [1.9.1] — 2026-04-11
 
 ### Fixed

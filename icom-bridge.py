@@ -29,15 +29,22 @@ parser.add_argument('--radio', default='10.0.10.112', help='Radio IP address')
 parser.add_argument('--port', type=int, default=50001, help='Radio CI-V UDP port')
 parser.add_argument('--username', default='', help='Network control username')
 parser.add_argument('--password', default='', help='Network control password')
-parser.add_argument('--civ-addr', type=lambda x: int(x, 0), default=0x98, help='CI-V address (0x98 for IC-7610)')
+parser.add_argument('--model', default='IC-7610', help='Radio model (IC-7610, IC-7300, IC-9700, IC-705, IC-7851, IC-R8600)')
+parser.add_argument('--civ-addr', type=lambda x: int(x, 0), default=0x98, help='CI-V address (auto-set from model if not specified)')
 parser.add_argument('--status-port', type=int, default=7377, help='REST status API port')
 args = parser.parse_args()
+
+# Auto-set CI-V address from model if using default
+MODEL_CIV = {'IC-7610': 0x98, 'IC-7300': 0x94, 'IC-9700': 0xA2,
+             'IC-705': 0xA4, 'IC-7851': 0x8E, 'IC-R8600': 0x96}
+if args.civ_addr == 0x98 and args.model != 'IC-7610':
+    args.civ_addr = MODEL_CIV.get(args.model, 0x98)
 
 # ── State ─────────────────────────────────────────────────────────────────────
 state = {
     'connected': False,
     'radio_ip': args.radio,
-    'radio_model': 'IC-7610',
+    'radio_model': args.model,
     'protocol_version': 'CI-V/LAN',
     'freq_hz': 14074000,
     'tx_freq_hz': 14074000,

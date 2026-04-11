@@ -390,13 +390,14 @@ function startIcomBridge() {
     '--port',     String(ic.radioPort  || 50001),
     '--username', ic.username   || '',
     '--password', ic.password   || '',
+    '--model',    ic.radioModel || 'IC-7610',
     '--civ-addr', '0x' + (ic.civAddress || 0x98).toString(16),
     '--status-port', String(ic.statusPort || 7377),
   ];
 
   console.log(`[Icom] Python: ${py3}`);
   console.log(`[Icom] Script: ${script}`);
-  console.log(`[Icom] Args: --radio ${ic.radioIp} --port ${ic.radioPort}`);
+  console.log(`[Icom] Args: --model ${ic.radioModel || 'IC-7610'} --radio ${ic.radioIp} --port ${ic.radioPort}`);
 
   const proc = require('child_process').spawn(py3, bridgeArgs, {
     cwd: __dirname, detached: false,

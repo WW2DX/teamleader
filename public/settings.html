@@ -201,7 +201,7 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
       <div class="cat-mode-tabs">
         <button class="cat-mode-tab active" id="tab-standard" onclick="setCatMode('standard')">Standard (rigctld)</button>
         <button class="cat-mode-tab flex-tab" id="tab-flex" onclick="setCatMode('flex')">FlexRadio 6000</button>
-        <button class="cat-mode-tab icom-tab" id="tab-icom" onclick="setCatMode('icom')">Icom IC-7610</button>
+        <button class="cat-mode-tab icom-tab" id="tab-icom" onclick="setCatMode('icom')">Icom (Network)</button>
       </div>
 
       <!-- Standard rigctld -->
@@ -409,7 +409,7 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
       <!-- Icom CI-V -->
       <div class="sub-panel" id="panel-icom">
         <div class="section-note" style="margin-bottom:12px">
-          Connect directly to an Icom IC-7610 over its built-in network interface. No rigctld, no USB cable, no extra software needed.
+          Connect directly to an Icom radio over its built-in network interface. Supports any Icom with Ethernet/Wi-Fi and CI-V over LAN.
         </div>
 
         <!-- Connection status bar -->
@@ -419,11 +419,23 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
           <div class="flex-status-meta" id="icom-status-meta"></div>
         </div>
 
+        <div class="field">
+          <label>Radio Model</label>
+          <select id="icom-model" onchange="icomModelChanged()" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;background:#fff">
+            <option value="IC-7610">IC-7610</option>
+            <option value="IC-7300">IC-7300 / IC-7300MKII</option>
+            <option value="IC-9700">IC-9700</option>
+            <option value="IC-705">IC-705</option>
+            <option value="IC-7851">IC-7851</option>
+            <option value="IC-R8600">IC-R8600</option>
+          </select>
+        </div>
+
         <div class="row">
           <div class="field">
             <label>Radio IP Address</label>
             <input type="text" id="icom-ip" value="10.0.10.112" placeholder="10.0.10.112"/>
-            <div class="hint">IC-7610 LAN IP — check Menu → Set → Network</div>
+            <div class="hint">Radio LAN IP — check Menu → Set → Network</div>
           </div>
           <div class="field" style="max-width:120px">
             <label>CI-V Port</label>
@@ -451,7 +463,7 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
               <div class="field" style="max-width:140px">
                 <label>CI-V Address</label>
                 <input type="text" id="icom-civ" value="0x98" placeholder="0x98"/>
-                <div class="hint">IC-7610 = 0x98, IC-7300 = 0x94</div>
+                <div class="hint">Auto-set by model selection</div>
               </div>
               <div class="field" style="max-width:140px">
                 <label>Bridge REST Port</label>
@@ -468,8 +480,8 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
         </div>
 
         <div class="section-note" style="margin-top:16px">
-          <strong>IC-7610 Setup:</strong> Menu → Set → Connectors → CI-V → CI-V USB Port → Unlink from [REMOTE].<br>
-          Menu → Set → Network → Network Control → ON, CI-V port = 50001.
+          <strong>Radio Setup:</strong> Menu → Set → Network → Network Control → ON.<br>
+          Set a username and password under Network User1. Note the Control Port (default 50001).
         </div>
       </div><!-- /panel-icom -->
 
@@ -741,6 +753,9 @@ async function loadSettings() {
     else if (cat.rigType === 'flex' || fb.enabled) setCatMode('flex');
 
     // Icom settings
+    const icomModel = ic.radioModel || 'IC-7610';
+    const modelSel = document.getElementById('icom-model');
+    for (const opt of modelSel.options) { if (opt.value === icomModel) opt.selected = true; }
     document.getElementById('icom-ip').value          = ic.radioIp     || '10.0.10.112';
     document.getElementById('icom-port').value         = ic.radioPort   || 50001;
     document.getElementById('icom-user').value         = ic.username    || '';
@@ -1230,10 +1245,23 @@ function collectFb() {
   };
 }
 
+// Icom model → CI-V address mapping
+const ICOM_MODELS = {
+  'IC-7610': 0x98, 'IC-7300': 0x94, 'IC-9700': 0xA2,
+  'IC-705': 0xA4, 'IC-7851': 0x8E, 'IC-R8600': 0x96,
+};
+
+function icomModelChanged() {
+  const model = document.getElementById('icom-model').value;
+  const addr = ICOM_MODELS[model] || 0x98;
+  document.getElementById('icom-civ').value = '0x' + addr.toString(16);
+}
+
 function collectIcom() {
   const civStr = document.getElementById('icom-civ').value.trim();
   return {
     enabled:       catMode === 'icom',
+    radioModel:    document.getElementById('icom-model').value || 'IC-7610',
     radioIp:       document.getElementById('icom-ip').value.trim() || '10.0.10.112',
     radioPort:     parseInt(document.getElementById('icom-port').value) || 50001,
     username:      document.getElementById('icom-user').value.trim(),

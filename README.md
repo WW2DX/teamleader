@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.9.1-blue" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-1.10.0-blue" alt="Version"/>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey" alt="Platform"/>
   <img src="https://img.shields.io/badge/license-Copyright%20WW2DX-orange" alt="License"/>
   <img src="https://img.shields.io/badge/node-%3E%3D18-green" alt="Node"/>
@@ -32,7 +32,7 @@ Team Leader is a real-time QSO logging system built for multi-operator DXpeditio
 - **Real-time sync** — log on one station, see it everywhere instantly
 - **Network-wide dupe checking** — prevents duplicates across all operators
 - **FlexRadio integration** — native SmartSDR API support via FlexBridge, standalone or alongside SmartSDR/aetherSDR
-- **Icom IC-7610 integration** — direct CI-V over the radio's built-in network interface, no USB cable or rigctld needed
+- **Icom network integration** — IC-7610, IC-9700, IC-705, IC-7300MKII, IC-7851 via CI-V over built-in LAN, no USB cable or rigctld needed
 - **TCI digimode bridge** — JTDX / MSHV / WSJT-X Improved connect directly to the radio, no BlackHole or virtual audio driver required
 - **Band conflict protection** — automatic TX inhibit when two operators are on the same band
 - **USB backup** — automatic ADIF export to USB drives every 5 minutes
@@ -231,11 +231,12 @@ Built-in CW contest mode with Enter Sends Message workflow:
 
 ---
 
-### Icom IC-7610 Integration (new)
+### Icom Network Integration (new)
 
-Native support for the Icom IC-7610 over its built-in network interface.
-Team Leader speaks CI-V directly to the radio over TCP — no rigctld, no
-USB cable, no extra software required.
+Native support for Icom radios with built-in Ethernet/Wi-Fi:
+**IC-7610**, **IC-9700**, **IC-705**, **IC-7300MKII**, **IC-7851**, and **IC-R8600**.
+Team Leader connects via Icom's proprietary UDP protocol (same as
+RS-BA1 / wfview) — no rigctld, no USB cable, no extra software.
 
 - **Network CI-V** — connects to the IC-7610's LAN IP via Icom's
   proprietary UDP protocol (same as RS-BA1 / wfview), with full
