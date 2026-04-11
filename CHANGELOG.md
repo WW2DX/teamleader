@@ -2,6 +2,12 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.11.1] — 2026-04-11
+
+### Changed
+- Top bar enlarged again: height 54→68px, title 18→22px, callsign 13→16px,
+  stat values 22→28px, labels 10→11px, separator 28→36px. Version text 9→11px.
+
 ## [1.11.0] — 2026-04-11
 
 ### Added

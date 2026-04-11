@@ -10,22 +10,22 @@ html,body{height:100%;overflow:hidden;background:#f0f2f5}
 body{color:#1a1a1a;font-family:'Courier New',Courier,monospace;font-size:13px;display:flex;flex-direction:column;height:100vh}
 
 /* ── TOP BAR ── */
-#topbar{display:flex;align-items:center;background:#1e3a5f;border-bottom:2px solid #15304f;padding:0 14px;height:54px;flex-shrink:0;gap:0}
-#badge{display:flex;flex-direction:column;justify-content:center;margin-right:6px;white-space:nowrap}
-#badge-title{font-size:18px;font-weight:700;color:#ffffff;letter-spacing:2px;line-height:1.2}
-#badge-title span{color:#fbbf24;font-size:13px;letter-spacing:1px;margin-left:6px;font-weight:400}
-#badge-tagline{font-size:9px;color:#4a7aaa;letter-spacing:1px;line-height:1.2;text-transform:uppercase}
-.tsep{width:1px;height:28px;background:#2d5a8e;margin:0 10px;flex-shrink:0}
-.tstat{display:flex;flex-direction:column;align-items:center;padding:0 14px;border-right:1px solid #2d5a8e;line-height:1.2;cursor:default;user-select:none}
+#topbar{display:flex;align-items:center;background:#1e3a5f;border-bottom:2px solid #15304f;padding:0 18px;height:68px;flex-shrink:0;gap:0}
+#badge{display:flex;flex-direction:column;justify-content:center;margin-right:8px;white-space:nowrap}
+#badge-title{font-size:22px;font-weight:700;color:#ffffff;letter-spacing:3px;line-height:1.2}
+#badge-title span{color:#fbbf24;font-size:16px;letter-spacing:1px;margin-left:8px;font-weight:400}
+#badge-tagline{font-size:10px;color:#4a7aaa;letter-spacing:1.5px;line-height:1.2;text-transform:uppercase}
+.tsep{width:1px;height:36px;background:#2d5a8e;margin:0 12px;flex-shrink:0}
+.tstat{display:flex;flex-direction:column;align-items:center;padding:0 16px;border-right:1px solid #2d5a8e;line-height:1.2;cursor:default;user-select:none}
 .tstat:last-of-type{border-right:none}
-.tval{font-size:22px;font-weight:700;color:#ffffff;letter-spacing:1px}
+.tval{font-size:28px;font-weight:700;color:#ffffff;letter-spacing:1px}
 .tval.amber{color:#fbbf24}
 .tval.red{color:#fca5a5}
 .tval.cyan{color:#7dd3fc}
 .tval.solar-good{color:#4ade80}
 .tval.solar-fair{color:#fbbf24}
 .tval.solar-poor{color:#f87171}
-.tlbl{font-size:10px;color:#93b4d4;text-transform:uppercase;letter-spacing:1px}
+.tlbl{font-size:11px;color:#93b4d4;text-transform:uppercase;letter-spacing:1px}
 #settings-link{margin-left:auto;font-size:12px;font-weight:600;color:#fbbf24;text-decoration:none;border:1px solid #4a6a9a;border-radius:4px;padding:4px 12px;background:#2d5a8e;letter-spacing:.5px;white-space:nowrap;flex-shrink:0}
 #settings-link:hover{background:#3d6aa0;border-color:#7aabda}
 #clkwrap{margin-left:8px;display:flex;flex-direction:column;align-items:flex-end;gap:0}
@@ -363,7 +363,7 @@ input[type=text]::placeholder{color:#9ca3af}
 <body>
 
 <div id="topbar">
-  <div id="badge"><div id="badge-title">TEAM LEADER <span id="top-call">NOCALL</span><span id="top-ver" style="font-size:9px;color:#4a6a9a;margin-left:8px;letter-spacing:0">v?</span></div><div id="badge-tagline">Built for DXpeditioners by DXpeditioners</div></div>
+  <div id="badge"><div id="badge-title">TEAM LEADER <span id="top-call">NOCALL</span><span id="top-ver" style="font-size:11px;color:#4a6a9a;margin-left:8px;letter-spacing:0">v?</span></div><div id="badge-tagline">Built for DXpeditioners by DXpeditioners</div></div>
   <div class="tsep"></div>
   <div class="tstat"><div class="tval" id="tv-q">0</div><div class="tlbl">QSOs</div></div>
   <div class="tstat"><div class="tval" id="tv-m">0</div><div class="tlbl">Mults</div></div>
