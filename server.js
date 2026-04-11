@@ -354,28 +354,68 @@ function scheduleSolar() {
   doFetch(); setInterval(doFetch,60*60*1000);
 }
 
-// ── Icom CI-V bridge (in-process) ─────────────────────────────────────────────
-const { IcomBridge } = require('./icom-bridge');
-let _icomBridge = null;
-
+// ── Icom CI-V bridge (Python child process, same pattern as FlexBridge) ──────
 function startIcomBridge() {
-  if (_icomBridge) { _icomBridge.stop(); _icomBridge = null; }
   const ic = config.cat?.icom || {};
-  _icomBridge = new IcomBridge({
-    radioIp:    ic.radioIp    || '10.0.10.112',
-    radioPort:  ic.radioPort  || 50001,
-    statusPort: ic.statusPort || 7377,
-    civAddress: ic.civAddress  || 0x98,
-    autoReconnect: ic.autoReconnect !== false,
-    log: (...a) => console.log(...a),
+  // Kill existing
+  if (global._icomBridgeProc) {
+    try { global._icomBridgeProc.kill('SIGTERM'); } catch {}
+    global._icomBridgeProc = null;
+  }
+  const { execSync: eSync } = require('child_process');
+  const shellPath = process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash';
+  // Find python3 with icom-lan installed (check venv first, then system)
+  let py3 = '';
+  const venvPy = '/tmp/icom-venv/bin/python3.14';
+  if (fs.existsSync(venvPy)) { py3 = venvPy; }
+  else {
+    try { py3 = eSync(`${shellPath} -l -c "which python3"`, {timeout:3000,encoding:'utf8'}).trim(); } catch {}
+    if (!py3) {
+      const home = process.env.HOME || require('os').homedir();
+      for (const p of [path.join(home,'.pyenv','shims','python3'),'/opt/homebrew/bin/python3','/usr/local/bin/python3','/usr/bin/python3']) {
+        if (fs.existsSync(p)) { py3 = p; break; }
+      }
+    }
+  }
+  if (!py3) py3 = 'python3';
+
+  const script = path.join(__dirname, 'icom-bridge.py');
+  if (!fs.existsSync(script)) {
+    console.error('[Icom] icom-bridge.py not found');
+    return;
+  }
+
+  const bridgeArgs = [script,
+    '--radio',    ic.radioIp    || '10.0.10.112',
+    '--port',     String(ic.radioPort  || 50001),
+    '--username', ic.username   || '',
+    '--password', ic.password   || '',
+    '--civ-addr', '0x' + (ic.civAddress || 0x98).toString(16),
+    '--status-port', String(ic.statusPort || 7377),
+  ];
+
+  console.log(`[Icom] Python: ${py3}`);
+  console.log(`[Icom] Script: ${script}`);
+  console.log(`[Icom] Args: --radio ${ic.radioIp} --port ${ic.radioPort}`);
+
+  const proc = require('child_process').spawn(py3, bridgeArgs, {
+    cwd: __dirname, detached: false,
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
-  _icomBridge.start();
-  // Start polling using the same FlexBridge poll mechanism
-  setTimeout(() => startFlexBridgePoll(true), 2000);
+  proc.stdout.on('data', d => console.log('[Icom]', d.toString().trimEnd()));
+  proc.stderr.on('data', d => console.log('[Icom] ERR', d.toString().trimEnd()));
+  proc.on('error', e => console.error('[Icom] SPAWN ERROR:', e.message));
+  proc.on('exit', (code, sig) => { console.log(`[Icom] exited code=${code} signal=${sig}`); global._icomBridgeProc = null; });
+  global._icomBridgeProc = proc;
+  console.log(`[Icom] Bridge started PID ${proc.pid}`);
+  setTimeout(() => startFlexBridgePoll(true), 3000);
 }
 
 function stopIcomBridge() {
-  if (_icomBridge) { _icomBridge.stop(); _icomBridge = null; }
+  if (global._icomBridgeProc) {
+    try { global._icomBridgeProc.kill('SIGTERM'); } catch {}
+    global._icomBridgeProc = null;
+  }
 }
 
 // Returns the REST API port for whichever bridge is active
@@ -1629,8 +1669,8 @@ function gracefulShutdown(signal) {
   if (_shuttingDown) return;
   _shuttingDown = true;
   console.log(`[Server] ${signal || 'shutdown'} — stopping child processes`);
-  if (_icomBridge) { try { _icomBridge.stop(); } catch {} }
   const kids = [
+    ['Icom',       global._icomBridgeProc],
     ['FlexBridge', global._flexbridgeProc],
     ['cat-bridge', global._catBridgeProc],
     ['WSJT-X',     global._wsjtProc],

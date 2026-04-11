@@ -2,6 +2,23 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.9.0] — 2026-04-11
+
+### Changed
+- **Icom bridge rewritten as Python** using the `icom-lan` library, which
+  implements the full Icom proprietary UDP protocol (authentication, token
+  renewal, keepalive, CI-V framing). The old Node.js TCP bridge is replaced
+  by `icom-bridge.py` — spawned as a child process like FlexBridge.
+- Settings page now includes **Username** and **Password** fields for IC-7610
+  network authentication.
+- server.js spawns `icom-bridge.py` via Python 3.14 venv at
+  `/tmp/icom-venv` where `icom-lan` is installed.
+
+### Fixed
+- IC-7610 connection: the radio uses a proprietary UDP protocol (not TCP
+  CI-V), requiring a multi-step handshake with credential encryption. The
+  `icom-lan` library handles this correctly.
+
 ## [1.8.2] — 2026-04-11
 
 ### Fixed

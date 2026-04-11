@@ -432,6 +432,18 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
           </div>
         </div>
 
+        <div class="row">
+          <div class="field">
+            <label>Username</label>
+            <input type="text" id="icom-user" value="" placeholder="Network User1 name"/>
+            <div class="hint">Menu → Set → Network → Network User1</div>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="icom-pass" value="" placeholder="Network User1 password"/>
+          </div>
+        </div>
+
         <details style="margin-top:4px">
           <summary style="font-size:12px;font-weight:600;color:#374151;cursor:pointer;padding:8px 0;user-select:none">Advanced options</summary>
           <div style="padding:8px 0">
@@ -731,6 +743,8 @@ async function loadSettings() {
     // Icom settings
     document.getElementById('icom-ip').value          = ic.radioIp     || '10.0.10.112';
     document.getElementById('icom-port').value         = ic.radioPort   || 50001;
+    document.getElementById('icom-user').value         = ic.username    || '';
+    document.getElementById('icom-pass').value         = ic.password    || '';
     document.getElementById('icom-civ').value          = ic.civAddress ? '0x' + ic.civAddress.toString(16) : '0x98';
     document.getElementById('icom-status-port').value  = ic.statusPort  || 7377;
 
@@ -1222,6 +1236,8 @@ function collectIcom() {
     enabled:       catMode === 'icom',
     radioIp:       document.getElementById('icom-ip').value.trim() || '10.0.10.112',
     radioPort:     parseInt(document.getElementById('icom-port').value) || 50001,
+    username:      document.getElementById('icom-user').value.trim(),
+    password:      document.getElementById('icom-pass').value,
     statusPort:    parseInt(document.getElementById('icom-status-port').value) || 7377,
     civAddress:    civStr.startsWith('0x') ? parseInt(civStr, 16) : parseInt(civStr) || 0x98,
     autoReconnect: true,

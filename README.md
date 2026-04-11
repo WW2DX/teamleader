@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.8.2-blue" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-1.9.0-blue" alt="Version"/>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey" alt="Platform"/>
   <img src="https://img.shields.io/badge/license-Copyright%20WW2DX-orange" alt="License"/>
   <img src="https://img.shields.io/badge/node-%3E%3D18-green" alt="Node"/>
@@ -237,8 +237,9 @@ Native support for the Icom IC-7610 over its built-in network interface.
 Team Leader speaks CI-V directly to the radio over TCP — no rigctld, no
 USB cable, no extra software required.
 
-- **Network CI-V** — connects to the IC-7610's LAN IP on port 50001
-  (configurable in the radio's network settings)
+- **Network CI-V** — connects to the IC-7610's LAN IP via Icom's
+  proprietary UDP protocol (same as RS-BA1 / wfview), with full
+  authentication support
 - **Frequency & mode tracking** — live VFO display in the logger, updated
   in real time via CI-V transceive and 400ms polling
 - **Frequency & mode control** — type a frequency or mode in the call box
