@@ -72,9 +72,15 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 .cat-mode-tab:hover{background:#f3f4f6;color:#374151}
 .cat-mode-tab.active{background:#fff;color:#1e3a5f;box-shadow:inset 0 -2px 0 #1e3a5f}
 .cat-mode-tab.active.flex-tab{background:#eff6ff;color:#1d4ed8;box-shadow:inset 0 -2px 0 #2563eb}
+.cat-mode-tab.active.icom-tab{background:#f0fdf4;color:#15803d;box-shadow:inset 0 -2px 0 #16a34a}
 
 .sub-panel{display:none}
 .sub-panel.visible{display:block}
+.btn{padding:8px 16px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;background:#2563eb;color:#fff;transition:background .15s}
+.btn:hover{background:#1d4ed8}
+.btn:disabled{background:#9ca3af;cursor:not-allowed}
+.btn-danger{background:#dc2626}
+.btn-danger:hover{background:#b91c1c}
 
 .flex-status-bar{display:flex;align-items:center;gap:10px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px 14px;margin-bottom:12px}
 .flex-status-bar.connected{background:#f0fdf4;border-color:#86efac}
@@ -193,8 +199,9 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 
       <label style="margin-bottom:8px">Rig Interface</label>
       <div class="cat-mode-tabs">
-        <button class="cat-mode-tab active" id="tab-standard" onclick="setCatMode('standard')">Standard Rig (rigctld / Hamlib)</button>
-        <button class="cat-mode-tab flex-tab" id="tab-flex" onclick="setCatMode('flex')">⚡ FlexRadio 6000 (FlexBridge)</button>
+        <button class="cat-mode-tab active" id="tab-standard" onclick="setCatMode('standard')">Standard (rigctld)</button>
+        <button class="cat-mode-tab flex-tab" id="tab-flex" onclick="setCatMode('flex')">FlexRadio 6000</button>
+        <button class="cat-mode-tab icom-tab" id="tab-icom" onclick="setCatMode('icom')">Icom IC-7610</button>
       </div>
 
       <!-- Standard rigctld -->
@@ -398,6 +405,62 @@ select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
         <div id="flex-cat-out" style="display:none;margin-top:6px" class="test-out"></div>
 
       </div><!-- /panel-flex -->
+
+      <!-- Icom CI-V -->
+      <div class="sub-panel" id="panel-icom">
+        <div class="section-note" style="margin-bottom:12px">
+          Connect directly to an Icom IC-7610 over its built-in network interface. No rigctld, no USB cable, no extra software needed.
+        </div>
+
+        <!-- Connection status bar -->
+        <div class="flex-status-bar" id="icom-status-bar">
+          <div class="flex-dot" id="icom-dot"></div>
+          <div class="flex-status-text" id="icom-status-text">Not connected</div>
+          <div class="flex-status-meta" id="icom-status-meta"></div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Radio IP Address</label>
+            <input type="text" id="icom-ip" value="10.0.10.112" placeholder="10.0.10.112"/>
+            <div class="hint">IC-7610 LAN IP — check Menu → Set → Network</div>
+          </div>
+          <div class="field" style="max-width:120px">
+            <label>CI-V Port</label>
+            <input type="number" id="icom-port" value="50001" placeholder="50001"/>
+            <div class="hint">Default 50001</div>
+          </div>
+        </div>
+
+        <details style="margin-top:4px">
+          <summary style="font-size:12px;font-weight:600;color:#374151;cursor:pointer;padding:8px 0;user-select:none">Advanced options</summary>
+          <div style="padding:8px 0">
+            <div class="row">
+              <div class="field" style="max-width:140px">
+                <label>CI-V Address</label>
+                <input type="text" id="icom-civ" value="0x98" placeholder="0x98"/>
+                <div class="hint">IC-7610 = 0x98, IC-7300 = 0x94</div>
+              </div>
+              <div class="field" style="max-width:140px">
+                <label>Bridge REST Port</label>
+                <input type="number" id="icom-status-port" value="7377"/>
+                <div class="hint">Default 7377</div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn" id="icom-connect-btn" onclick="icomConnect()">Connect</button>
+          <button class="btn btn-danger" id="icom-disconnect-btn" onclick="icomDisconnect()" style="display:none">Disconnect</button>
+        </div>
+
+        <div class="section-note" style="margin-top:16px">
+          <strong>IC-7610 Setup:</strong> Menu → Set → Connectors → CI-V → CI-V USB Port → Unlink from [REMOTE].<br>
+          Menu → Set → Network → Network Control → ON, CI-V port = 50001.
+        </div>
+      </div><!-- /panel-icom -->
+
     </div>
   </div>
 
@@ -618,17 +681,24 @@ function setCatMode(mode) {
   catMode = mode;
   document.getElementById('tab-standard').classList.toggle('active', mode === 'standard');
   document.getElementById('tab-flex').classList.toggle('active', mode === 'flex');
+  document.getElementById('tab-icom').classList.toggle('active', mode === 'icom');
   document.getElementById('panel-standard').classList.toggle('visible', mode === 'standard');
   document.getElementById('panel-flex').classList.toggle('visible', mode === 'flex');
+  document.getElementById('panel-icom').classList.toggle('visible', mode === 'icom');
   updateCatBadge();
   if (mode === 'flex') {
     renderDaxList(); startFbPoll();
-    // Immediately fetch radios — don't wait for poll cycle
     fetch('/api/fb/radios').then(r => r.ok ? r.json() : []).then(radios => {
       if (Array.isArray(radios) && radios.length) renderRadioList(radios);
     }).catch(() => {});
+  } else {
+    stopFbPoll();
   }
-  else stopFbPoll();
+  if (mode === 'icom') {
+    startIcomPoll();
+  } else {
+    stopIcomPoll();
+  }
 }
 
 // ── load ───────────────────────────────────────────────────────────────
@@ -653,7 +723,15 @@ async function loadSettings() {
       if (o.value == (cat.baudRate || 19200)) o.selected = true;
 
     const fb = cat.flexbridge || {};
-    if (cat.rigType === 'flex' || fb.enabled) setCatMode('flex');
+    const ic = cat.icom || {};
+    if (cat.rigType === 'icom' || ic.enabled) setCatMode('icom');
+    else if (cat.rigType === 'flex' || fb.enabled) setCatMode('flex');
+
+    // Icom settings
+    document.getElementById('icom-ip').value          = ic.radioIp     || '10.0.10.112';
+    document.getElementById('icom-port').value         = ic.radioPort   || 50001;
+    document.getElementById('icom-civ').value          = ic.civAddress ? '0x' + ic.civAddress.toString(16) : '0x98';
+    document.getElementById('icom-status-port').value  = ic.statusPort  || 7377;
 
     document.getElementById('flexRadioIp').value     = fb.radioIp       || '';
     document.getElementById('flexCatSlice').value    = fb.catSlice      || '0';
@@ -1137,6 +1215,110 @@ function collectFb() {
   };
 }
 
+function collectIcom() {
+  const civStr = document.getElementById('icom-civ').value.trim();
+  return {
+    enabled:       catMode === 'icom',
+    radioIp:       document.getElementById('icom-ip').value.trim() || '10.0.10.112',
+    radioPort:     parseInt(document.getElementById('icom-port').value) || 50001,
+    statusPort:    parseInt(document.getElementById('icom-status-port').value) || 7377,
+    civAddress:    civStr.startsWith('0x') ? parseInt(civStr, 16) : parseInt(civStr) || 0x98,
+    autoReconnect: true,
+  };
+}
+
+// ── Icom connect / disconnect / poll ──────────────────────────────────
+async function icomConnect() {
+  const btn = document.getElementById('icom-connect-btn');
+  const dot = document.getElementById('icom-dot');
+  const txt = document.getElementById('icom-status-text');
+  btn.disabled = true; btn.textContent = 'Connecting…';
+  dot.className = 'flex-dot pulse'; txt.textContent = 'Starting Icom bridge…';
+  // Save config first so server has the right IP/port
+  try {
+    await fetch('/api/settings', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ cat: { rigType: 'icom', icom: collectIcom() } }),
+    });
+  } catch {}
+  try {
+    const r = await fetch('/api/icom/start', { method: 'POST' });
+    if (r.ok) {
+      txt.textContent = 'Bridge started — connecting to radio…';
+      startIcomPoll();
+    } else {
+      const d = await r.json().catch(() => ({}));
+      txt.textContent = 'Start failed: ' + (d.error || 'unknown');
+      dot.className = 'flex-dot err';
+    }
+  } catch (e) {
+    txt.textContent = 'Error: ' + e.message;
+    dot.className = 'flex-dot err';
+  }
+  btn.disabled = false; btn.textContent = 'Connect';
+}
+
+async function icomDisconnect() {
+  await fetch('/api/icom/stop', { method: 'POST' }).catch(() => {});
+  stopIcomPoll();
+  document.getElementById('icom-dot').className = 'flex-dot';
+  document.getElementById('icom-status-text').textContent = 'Disconnected';
+  document.getElementById('icom-status-meta').textContent = '';
+  document.getElementById('icom-status-bar').className = 'flex-status-bar';
+  document.getElementById('icom-connect-btn').style.display = '';
+  document.getElementById('icom-disconnect-btn').style.display = 'none';
+}
+
+let _icomPollTimer = null;
+function startIcomPoll() {
+  stopIcomPoll();
+  _icomPollTimer = setInterval(icomPoll, 2500);
+  setTimeout(icomPoll, 500);
+}
+function stopIcomPoll() { if (_icomPollTimer) { clearInterval(_icomPollTimer); _icomPollTimer = null; } }
+
+async function icomPoll() {
+  const dot  = document.getElementById('icom-dot');
+  const txt  = document.getElementById('icom-status-text');
+  const meta = document.getElementById('icom-status-meta');
+  const bar  = document.getElementById('icom-status-bar');
+  try {
+    const r = await fetch('/api/icom/status');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (d.connected || d.running) {
+      // Also get full status from the bridge REST API
+      const sr = await fetch('/api/fb/status').catch(() => null);
+      let freq = '?', mode = '?';
+      if (sr && sr.ok) {
+        const sd = await sr.json();
+        freq = (sd.freq_hz / 1e6).toFixed(3);
+        mode = sd.mode || '?';
+      }
+      dot.className = 'flex-dot ok';
+      txt.textContent = 'Connected to IC-7610 at ' + (d.radioIp || '?');
+      meta.textContent = freq + ' MHz  ' + mode;
+      bar.className = 'flex-status-bar connected';
+      document.getElementById('icom-connect-btn').style.display = 'none';
+      document.getElementById('icom-disconnect-btn').style.display = '';
+    } else {
+      dot.className = 'flex-dot';
+      txt.textContent = 'Not connected';
+      meta.textContent = '';
+      bar.className = 'flex-status-bar';
+      document.getElementById('icom-connect-btn').style.display = '';
+      document.getElementById('icom-disconnect-btn').style.display = 'none';
+    }
+  } catch {
+    dot.className = 'flex-dot';
+    txt.textContent = 'Bridge not running';
+    meta.textContent = '';
+    bar.className = 'flex-status-bar';
+    document.getElementById('icom-connect-btn').style.display = '';
+    document.getElementById('icom-disconnect-btn').style.display = 'none';
+  }
+}
+
 async function fbSaveConfig() {
   await fetch('/api/settings', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -1168,6 +1350,7 @@ async function saveSettings() {
         enabled:     document.getElementById('catEnabled').checked,
         rigType:     catMode,
         flexbridge:  collectFb(),
+        icom:        collectIcom(),
         rigctldHost: document.getElementById('rigctldHost').value.trim()||'127.0.0.1',
         rigctldPort: parseInt(document.getElementById('rigctldPort').value)||4532,
         rigModel:    document.getElementById('rigModel').value.trim(),
