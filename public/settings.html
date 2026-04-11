@@ -675,6 +675,7 @@ let flexDaxChs = [1];
 let fbPollTimer = null;
 let _fbPollFailCount = 0;
 const FB_FAIL_THRESHOLD = 4;
+let _icomPollTimer = null;
 
 // ── mode tabs ──────────────────────────────────────────────────────────
 function setCatMode(mode) {
@@ -1269,7 +1270,6 @@ async function icomDisconnect() {
   document.getElementById('icom-disconnect-btn').style.display = 'none';
 }
 
-let _icomPollTimer = null;
 function startIcomPoll() {
   stopIcomPoll();
   _icomPollTimer = setInterval(icomPoll, 2500);
