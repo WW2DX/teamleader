@@ -827,6 +827,14 @@ function startPeerServer() {
     const ip=(req.socket.remoteAddress||'').replace('::ffff:','');
     console.log(`[Peer] Inbound from ${ip}`);
     ws.send(JSON.stringify({type:'PEER_HELLO',operatorId:config.operatorId,callsign:config.callsign,maxSeq:getMaxSeq()}));
+    // Proactively push our operator states and peer list so the new peer is
+    // fully up-to-date immediately, without waiting for their PEER_HELLO response.
+    setTimeout(()=>{
+      try {
+        ws.send(JSON.stringify({type:'PEER_LIST',peers:getPeerInfoList()}));
+        getLocalOpStates().forEach(op=>{ try{ws.send(JSON.stringify(op));}catch{} });
+      } catch {}
+    }, 300);
     ws.on('message',raw=>handlePeerMsg(ip,raw));
     ws.on('close',()=>{ console.log(`[Peer] Inbound ${ip} closed`); if(peerConnections.get(ip)===ws) { peerConnections.delete(ip); broadcastPeerList(); } });
     ws.on('error',()=>{});
@@ -867,6 +875,9 @@ function startBrowserWS() {
           }));
           bcastAll({type:'STATION_LIST',stations:stationList(),masterId:config.operatorId,operators:config.operators||[]});
           broadcastPeerList();
+          // Push this operator's state to all peers so they see us immediately
+          broadcastToPeers({type:'PEER_OP_STATE',stationId:opId,operatorId:msg.operatorId||opId,
+            callsign:msg.callsign||msg.operatorId||opId,sourceStation:config.operatorId});
           // Push current rig state to this new browser immediately
           if (_fbOnline && _fbLastFreq) {
             ws.send(JSON.stringify({
@@ -911,7 +922,13 @@ function startBrowserWS() {
           broadcastToPeers({type:'PEER_QSO_DELETE',id:msg.id}); break;
 
         case 'OP_STATE':
-          if(msg.callsign&&stations.has(opId)) stations.get(opId).callsign=msg.callsign;
+          if(stations.has(opId)) {
+            const st=stations.get(opId);
+            if(msg.callsign) st.callsign=msg.callsign;
+            if(msg.txFreq)   st.txFreq=msg.txFreq;
+            if(msg.rxFreq)   st.rxFreq=msg.rxFreq;
+            if(msg.mode)     st.mode=msg.mode;
+          }
           bcastAll({...msg,stationId:opId,operatorId:stations.get(opId)?.operatorId||opId});
           broadcastToPeers({...msg,type:'PEER_OP_STATE',stationId:opId,sourceStation:config.operatorId}); break;
 
@@ -1021,6 +1038,7 @@ function startBrowserWS() {
   _getLocalOpStates = () => [...stations.entries()].map(([id,info])=>({
     type:'PEER_OP_STATE', stationId:id, operatorId:info.operatorId||id,
     callsign:info.callsign||id, sourceStation:config.operatorId,
+    txFreq:info.txFreq||null, rxFreq:info.rxFreq||null, mode:info.mode||null,
   }));
 }
 

@@ -163,11 +163,13 @@ input[type=text]::placeholder{color:#9ca3af}
 #right{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:#f0f2f5}
 
 /* ── NETWORK BAR ── */
-#netbar{display:flex;align-items:center;background:#1e3a5f;padding:0 10px;height:30px;gap:3px;flex-shrink:0;overflow:hidden}
+#netbar{background:#1e3a5f;padding:4px 10px;flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 0;max-height:72px;overflow-y:auto}
+#netbar::-webkit-scrollbar{width:3px}
+#netbar::-webkit-scrollbar-thumb{background:#4a7aab;border-radius:2px}
 .netlbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#93b4d4;margin-right:6px;flex-shrink:0}
-.nn{display:flex;align-items:center;gap:4px;font-size:11px;padding:0 8px;border-right:1px solid #2d5a8e;white-space:nowrap}
-.nn:last-child{border-right:none}
-.ndot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+#stationlist{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+.nn{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 6px;white-space:nowrap;background:rgba(255,255,255,.06);border-radius:3px}
+.ndot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .ndot.up{background:#4ade80}
 .ndot.dw{background:#f87171}
 .ndot.wn{background:#fbbf24}
