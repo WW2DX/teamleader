@@ -31,8 +31,9 @@ Team Leader is a real-time QSO logging system built for multi-operator DXpeditio
 - **Auto-discovery** — stations find each other automatically via mDNS
 - **Real-time sync** — log on one station, see it everywhere instantly
 - **Network-wide dupe checking** — prevents duplicates across all operators
-- **FlexRadio integration** — native SmartSDR API support via FlexBridge
+- **FlexRadio integration** — native SmartSDR API support via FlexBridge, standalone or alongside SmartSDR/aetherSDR
 - **TCI digimode bridge** — JTDX / MSHV / WSJT-X Improved connect directly to the radio, no BlackHole or virtual audio driver required
+- **Band conflict protection** — automatic TX inhibit when two operators are on the same band
 - **USB backup** — automatic ADIF export to USB drives every 5 minutes
 - **Runs anywhere** — macOS, Linux, web browser, or native Electron app
 - **Minimal dependencies** — only 3 npm packages (sql.js, uuid, ws)
@@ -132,6 +133,29 @@ Team Leader uses a true peer mesh topology. Every station discovers others via m
 - **Resilient sync** — if a station disconnects and reconnects, it re-syncs automatically
 - **QSO queue** — QSOs logged while offline are queued and flushed on reconnect
 - **Cross-station dupe check** — the dupe database spans all connected stations
+- **Band conflict protection** — if two operators tune to the same band, a
+  flashing warning banner appears on both stations and TX is automatically
+  inhibited until one operator moves to a different band
+
+---
+
+### Band Conflict Protection (new)
+
+On a DXpedition, two stations transmitting on the same band causes
+interference and wastes operating time. Team Leader watches every operator's
+frequency in real time and raises a three-layer alarm the moment two stations
+share a band:
+
+1. **Flashing banner** — a red "BAND CONFLICT" banner names the other
+   operator and the contested band.
+2. **CW TX block** — ESM / CWX transmissions are refused at the browser level
+   with a visible "TX BLOCKED" message.
+3. **Radio TX inhibit** — FlexBridge sends `xmit 0` to the SmartSDR API,
+   forcing MOX off at the hardware level so no RF goes out even if a
+   foot-switch is pressed.
+
+The conflict clears automatically the instant one operator QSYs to a
+different band, re-enabling TX with no manual intervention.
 
 ---
 
@@ -139,7 +163,10 @@ Team Leader uses a true peer mesh topology. Every station discovers others via m
 
 <!-- ![FlexBridge Settings](docs/screenshots/flexbridge-settings.png) -->
 
-Native support for FlexRadio 6000 series via the SmartSDR API. FlexBridge connects directly to your radio — no rigctld required.
+Native support for FlexRadio 6000 series via the SmartSDR API. FlexBridge
+connects directly to your radio — no rigctld required. It registers as a
+full GUI client and creates its own slice, so it works **standalone** without
+SmartSDR or aetherSDR running (though it works alongside them too).
 
 - **Auto-discovery** — finds FlexRadios on your network via multicast
 - **Frequency & mode display** — live VFO tracking in the logger

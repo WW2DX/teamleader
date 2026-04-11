@@ -64,6 +64,7 @@ state = {
     'split':            False,
     'slice':            args.cat_slice,
     'cwx_speed':        25,
+    'tx_inhibit':       False,
     'cat': {
         'serial_symlink': PTY_SYMLINK,
         'tcp_port':       args.cat_port,
@@ -94,6 +95,7 @@ class SmartSDR:
         self._running  = False
         self._thread   = None
         self._handle   = None   # assigned by SmartSDR on connect (H<hex>)
+        self._slices   = {}     # slice_idx -> {props} — track which slices exist
 
     def connect(self, ip):
         try:
@@ -114,18 +116,49 @@ class SmartSDR:
             return False
 
     def _register(self):
-        """Register as a client after receiving handle — required for slice commands."""
-        # Use the UDP-trick to get the real LAN IP (not 127.0.0.1)
+        """Register as a GUI client after receiving handle.
+
+        SmartSDR requires `client program` to identify the connecting app.
+        Without it (and without a separate GUI client like SmartSDR/aetherSDR),
+        the radio has no slices and write commands like `slice tune` are no-ops.
+        Registering as a GUI-capable client lets FlexBridge create its own slice
+        when no other GUI client is connected.
+        """
         local_ip = _get_local_ip() or '127.0.0.1'
+        # Register as a named GUI-capable client
+        self.cmd(f'client program FlexBridge')
         self.cmd(f'client ip {local_ip}')
+        self.cmd(f'client station FlexBridge')
         self.cmd('sub slice all')
         self.cmd('sub radio all')
-        # Note: 'sub cwx' is rejected in SmartSDR v1.4 (error 50000016)
-        log.info(f'[SmartSDR] Client registered (ip={local_ip}), subscribed to slice/radio')
+        log.info(f'[SmartSDR] Client registered as FlexBridge (ip={local_ip})')
+        # After a brief delay (let status messages arrive), check if our target
+        # slice exists.  If no GUI client has created one we must do it ourselves.
+        threading.Thread(target=self._ensure_slice, daemon=True).start()
+
+    def _ensure_slice(self):
+        """Wait for slice status to arrive; create a slice if none exists."""
+        time.sleep(2.0)  # give the radio time to send existing slice statuses
+        target = state['slice']
+        if target in self._slices:
+            log.info(f'[SmartSDR] Slice {target} already exists')
+            return
+        # No slice yet — create one.  The radio will respond with a slice status
+        # message that _handle_status picks up.
+        log.info(f'[SmartSDR] Slice {target} not found — creating it')
+        freq_mhz = state['freq_hz'] / 1_000_000
+        self.cmd(f'slice create freq={freq_mhz:.6f} mode={state["mode"]}')
+        time.sleep(1.0)
+        if target in self._slices:
+            log.info(f'[SmartSDR] Slice {target} created successfully')
+        else:
+            log.warning(f'[SmartSDR] Slice {target} may not have been created — '
+                        f'check radio. Known slices: {list(self._slices.keys())}')
 
     def disconnect(self):
         self._running = False
         state['connected'] = False
+        self._slices = {}
         if self.sock:
             try: self.sock.close()
             except: pass
@@ -173,6 +206,9 @@ class SmartSDR:
 
     def cwx_send(self, text):
         """Send text via SmartSDR CWX keyer."""
+        if state.get('tx_inhibit'):
+            log.warning(f'[CWX] TX inhibited (band conflict) — blocked: {text!r}')
+            return
         safe = text.replace('"', '')
         self.cmd(f'cwx send "{safe}"')
         log.info(f'cwx send: {safe!r}')
@@ -251,6 +287,8 @@ class SmartSDR:
         m = re.match(r'^slice (\d+) (.+)$', body)
         if m:
             sl_idx = int(m.group(1))
+            # Track all slices so _ensure_slice knows what exists
+            self._slices[sl_idx] = True
             if sl_idx != state['slice']:
                 return
             pairs = re.findall(r'(\w+)=(\S+)', m.group(2))
@@ -613,9 +651,21 @@ def handle_cat(cmd):
     if cmd.startswith('AI'):
         return 'AI0;'
 
-    # TX / RX
-    if cmd == 'TX': return ''
-    if cmd == 'RX': return ''
+    # TX / RX — also used for band-conflict inhibit (TX0=inhibit, TX1=release)
+    if cmd == 'TX':  return ''
+    if cmd == 'TX0':
+        # Inhibit transmit — tell SmartSDR to disable MOX
+        if state['connected']:
+            radio.cmd('xmit 0')
+            log.warning('[CAT] TX INHIBITED (band conflict)')
+        state['tx_inhibit'] = True
+        return ''
+    if cmd == 'TX1':
+        # Release transmit inhibit
+        state['tx_inhibit'] = False
+        log.info('[CAT] TX inhibit released')
+        return ''
+    if cmd == 'RX':  return ''
 
     # PS — power status
     if cmd == 'PS': return 'PS1;'
@@ -913,6 +963,7 @@ class FlexBridgeAPI(BaseHTTPRequestHandler):
                 'rx_freq_hz':       state['rx_freq_hz'],
                 'mode':             state['mode'],
                 'split':            state['split'],
+                'tx_inhibit':       state.get('tx_inhibit', False),
                 'slice':            state['slice'],
                 'cat':              state['cat'],
                 'dax':              {str(k): v for k, v in state['dax'].items()},

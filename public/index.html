@@ -108,6 +108,8 @@ input[type=text]::placeholder{color:#9ca3af}
 #dxinfo-cont.OC{background:#ffedd5;color:#9a3412;border-color:#fdba74}
 #dxinfo-cont.AN{background:#f1f5f9;color:#334155;border-color:#cbd5e1}
 #dxinfo-cont.??{background:#f3f4f6;color:#6b7280;border-color:#d1d5db}
+#bandconflict{display:none;border-radius:4px;font-size:13px;font-weight:700;padding:8px 12px;letter-spacing:1px;text-align:center;margin-top:6px;background:#fef2f2;border:3px solid #dc2626;color:#991b1b;animation:blk .5s ease-in-out infinite alternate}
+#bandconflict.show{display:block}
 #dupebanner{background:#fee2e2;border:2px solid #dc2626;color:#991b1b;animation:blk .5s ease-in-out infinite alternate}
 #newbanner{background:#dcfce7;border:2px solid #16a34a;color:#14532d}
 #cmdbanner{background:#dbeafe;border:1px solid #3b82f6;color:#1e40af}
@@ -425,6 +427,7 @@ input[type=text]::placeholder{color:#9ca3af}
         <div id="opstation">-- / --</div>
         <button id="oponbtn" onclick="openOPON()">OPON</button>
       </div>
+      <div id="bandconflict">&#9888;&nbsp; BAND CONFLICT — <span id="bandconflict-who"></span> is also on <span id="bandconflict-band"></span>! TX INHIBITED</div>
       <div id="dupebanner">&#9888;&nbsp; DUPE — Already worked this band/mode</div>
       <div id="newbanner">&#9733;&nbsp; NEW MULTIPLIER!</div>
       <div id="cmdbanner">--</div>
@@ -690,7 +693,9 @@ function tryCommand(raw) {
     showCmd('Freq: ' + currentFreq + ' MHz — ' + currentBand);
     addMsg('SYS', 'Frequency → ' + currentFreq + ' ' + currentBand, 'cmd');
     // Tell rig to follow
-    sendWS({ type: 'SET_FREQ', freq: parseFloat(currentFreq) });
+    const freqSent = sendWS({ type: 'SET_FREQ', freq: parseFloat(currentFreq) });
+    console.log('[CAT] tryCommand freq:', currentFreq, 'sent:', freqSent);
+    checkBandConflict();
     document.getElementById('callIn').value = '';
     return true;
   }
@@ -954,8 +959,42 @@ function handleMsg(msg) {
 }
 
 function sendWS(msg) {
-  if (ws && ws.readyState === WebSocket.OPEN) { ws.send(JSON.stringify(msg)); return true; }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+    if (msg.type === 'SET_FREQ' || msg.type === 'SET_MODE') {
+      console.log('[CAT] Sent via WS:', msg.type, msg.freq || msg.mode);
+    }
+    return true;
+  }
+  // WebSocket not connected — fall back to REST for rig commands
+  if (msg.type === 'SET_FREQ' || msg.type === 'SET_MODE') {
+    console.warn('[CAT] WS not open — falling back to REST for', msg.type);
+    _sendCatREST(msg);
+    return true;
+  }
   return false;
+}
+
+function _sendCatREST(msg) {
+  let cmd;
+  if (msg.type === 'SET_FREQ') {
+    const hz = Math.round(parseFloat(msg.freq) * 1e6);
+    cmd = 'FA' + String(hz).padStart(11, '0') + ';';
+  } else if (msg.type === 'SET_MODE') {
+    const ts2k = { SSB:'2', CW:'3', FT8:'9', DIGU:'9', AM:'5', FM:'4' }[msg.mode.toUpperCase()] || '2';
+    cmd = 'MD' + ts2k + ';';
+  }
+  if (!cmd) return;
+  fetch('/api/fb/cat/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: cmd }),
+  }).then(r => {
+    console.log('[CAT] REST fallback', cmd, 'status:', r.status);
+  }).catch(e => {
+    console.warn('[CAT] REST fallback failed:', e.message);
+    addMsg('SYS', 'Rig command failed — FlexBridge not reachable', 'err');
+  });
 }
 
 // ── Mode ───────────────────────────────────────────────────────────────────────
@@ -1025,6 +1064,62 @@ function checkEntry() {
   else if (n) document.getElementById('newbanner').classList.add('show');
 }
 
+// ── Band conflict detection ────────────────────────────────────────────────────
+// If another operator is on the same band, show a warning and inhibit TX.
+let bandConflictActive = false;
+let bandConflictOp     = null;
+
+function checkBandConflict() {
+  const myBand = currentBand;
+  const mySid  = sessionId;
+  let conflict = null;
+
+  if (myBand && myBand !== '??') {
+    for (const [sid, s] of opStatus) {
+      if (sid === mySid) continue;          // skip self
+      if (!s.online) continue;              // skip offline
+      if (!s.txFreq) continue;              // no freq announced
+      const theirBand = getBand(s.txFreq);
+      if (theirBand === myBand) {
+        conflict = s.callsign || s.operatorId || sid;
+        break;
+      }
+    }
+  }
+
+  const el  = document.getElementById('bandconflict');
+  const was = bandConflictActive;
+  if (conflict) {
+    bandConflictActive = true;
+    bandConflictOp     = conflict;
+    document.getElementById('bandconflict-who').textContent  = conflict;
+    document.getElementById('bandconflict-band').textContent = myBand;
+    el.classList.add('show');
+    // Inhibit TX on the radio via FlexBridge
+    if (!was) {
+      console.warn(`[BAND CONFLICT] ${conflict} is also on ${myBand} — TX inhibited`);
+      _setBandConflictInhibit(true);
+    }
+  } else {
+    bandConflictActive = false;
+    bandConflictOp     = null;
+    el.classList.remove('show');
+    if (was) {
+      console.log('[BAND CONFLICT] Cleared — TX re-enabled');
+      _setBandConflictInhibit(false);
+    }
+  }
+}
+
+function _setBandConflictInhibit(inhibit) {
+  // Tell FlexBridge to inhibit/release TX
+  fetch('/api/fb/cat/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: inhibit ? 'TX0;' : 'TX1;' }),
+  }).catch(() => {});
+}
+
 // ── Logging ────────────────────────────────────────────────────────────────────
 function makeUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -1049,6 +1144,11 @@ function expandMacro(template, call) {
 
 function sendCW(text) {
   if (!text) return;
+  if (bandConflictActive) {
+    addMsg('SYS', 'TX BLOCKED — ' + bandConflictOp + ' is on ' + currentBand + '!', 'err');
+    showCmd('TX INHIBITED — BAND CONFLICT');
+    return;
+  }
   sendWS({ type: 'CWX_SEND', text });
 }
 
@@ -1430,6 +1530,7 @@ function updateOpStatus(stationId, patch) {
   };
   opStatus.set(stationId, { ...existing, ...patch });
   renderOpPanel();
+  checkBandConflict();
 }
 
 function recordOpQSO(operatorCallOrId, timestamp) {
@@ -2324,10 +2425,10 @@ function rebuildNetBar() {
     return '<div class="nn"><div class="ndot ' + dot + '"></div><div class="' + nm + '">' + displayName + suf + '</div></div>';
   });
 
-  // Remote peers from peer mesh
+  // Remote peers from peer mesh — show operator callsign, not DXpedition call
   const remoteEntries = (latestPeers || []).filter(p => !p.isSelf).map(p => {
     const dot = p.online ? 'up' : 'dw';
-    return '<div class="nn"><div class="ndot ' + dot + '"></div><div class="nname peer-node">' + (p.callsign || p.operatorId) + ' [' + p.operatorId + ']</div></div>';
+    return '<div class="nn"><div class="ndot ' + dot + '"></div><div class="nname peer-node">' + (p.operatorId || p.callsign) + '</div></div>';
   });
 
   document.getElementById('stationlist').innerHTML = [...localEntries, ...remoteEntries].join('');
@@ -2773,6 +2874,7 @@ function applyCATState(msg) {
       setMode(msg.mode, false);
     }
     broadcastOpState();
+    checkBandConflict();
   }
   // Track rig online state for ESM — re-render bar to show/clear offline warning
   const wasOnline = cwRigOnline;

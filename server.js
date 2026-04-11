@@ -771,10 +771,13 @@ function handlePeerMsg(fromIP, raw) {
     case 'PEER_QSO_DELETE': softDelete(msg.id); broadcastToBrowsers({type:'QSO_DELETE',id:msg.id}); break;
     case 'PEER_OP_STATE':
       broadcastToBrowsers({...msg, type:'OP_STATE'});
-      // Update discovered peer's callsign with the current operator name so the
-      // Network bar shows "NN2DX [OP2]" instead of "VK0EK [OP2]"
+      // Update discovered peer's identity with the current OPON operator callsign
+      // so the Network bar shows operator personal calls (e.g. NN2DX) not the
+      // DXpedition call (VK0EK) or the generic config operatorId (OP2).
       if (msg.callsign && discoveredPeers.has(fromIP)) {
-        discoveredPeers.get(fromIP).callsign = msg.callsign;
+        const peer = discoveredPeers.get(fromIP);
+        peer.callsign   = msg.callsign;
+        peer.operatorId = msg.callsign;
         broadcastPeerList();
       }
       break;
