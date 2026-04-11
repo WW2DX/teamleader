@@ -354,6 +354,39 @@ function scheduleSolar() {
   doFetch(); setInterval(doFetch,60*60*1000);
 }
 
+// ── Icom CI-V bridge (in-process) ─────────────────────────────────────────────
+const { IcomBridge } = require('./icom-bridge');
+let _icomBridge = null;
+
+function startIcomBridge() {
+  if (_icomBridge) { _icomBridge.stop(); _icomBridge = null; }
+  const ic = config.cat?.icom || {};
+  _icomBridge = new IcomBridge({
+    radioIp:    ic.radioIp    || '10.0.10.112',
+    radioPort:  ic.radioPort  || 50001,
+    statusPort: ic.statusPort || 7377,
+    civAddress: ic.civAddress  || 0x98,
+    autoReconnect: ic.autoReconnect !== false,
+    log: (...a) => console.log(...a),
+  });
+  _icomBridge.start();
+  // Start polling using the same FlexBridge poll mechanism
+  setTimeout(() => startFlexBridgePoll(true), 2000);
+}
+
+function stopIcomBridge() {
+  if (_icomBridge) { _icomBridge.stop(); _icomBridge = null; }
+}
+
+// Returns the REST API port for whichever bridge is active
+function getActiveBridgePort() {
+  const rigType = config.cat?.rigType;
+  if (rigType === 'icom' || config.cat?.icom?.enabled) {
+    return parseInt(config.cat?.icom?.statusPort) || 7377;
+  }
+  return parseInt(config.cat?.flexbridge?.statusPort) || 7376;
+}
+
 // ── FlexBridge CAT poller ──────────────────────────────────────────────────────
 let _fbLastFreq=null,_fbLastMode=null,_fbLastRx=null,_fbOnline=false,_fbFailCount=0;
 const FB_MAX_FAILS=5;
@@ -379,8 +412,7 @@ function normaliseFlexMode(raw){
 }
 
 function pollFlexBridge(){
-  const fb=config.cat?.flexbridge||{};
-  const port=parseInt(fb.statusPort)||7376;
+  const port=getActiveBridgePort();
   const req=http.get({host:'127.0.0.1',port,path:'/status',timeout:1200},res=>{
     let buf='';
     res.on('data',d=>{buf+=d;});
@@ -444,8 +476,7 @@ function stopFlexBridgePoll(){
 // Track last sent CW speed to avoid redundant speed commands
 function sendCWX(text) {
   // Send CW text only — speed is managed separately via sendCWXSpeed()
-  const fb = config.cat?.flexbridge || {};
-  const port = parseInt(fb.statusPort) || 7376;
+  const port = getActiveBridgePort();
   const body = JSON.stringify({ text });
   const req = http.request({
     host:'127.0.0.1', port, path:'/cwx/send',
@@ -462,8 +493,7 @@ function sendCWXSpeed(wpm) {
   // Keep in-memory config in sync so /api/config returns correct speed
   if (!config.cw) config.cw = {};
   config.cw.speed = w;
-  const fb = config.cat?.flexbridge || {};
-  const port = parseInt(fb.statusPort) || 7376;
+  const port = getActiveBridgePort();
   const body = JSON.stringify({ wpm: w });
   const req = http.request({
     host:'127.0.0.1', port, path:'/cwx/speed',
@@ -479,8 +509,7 @@ function sendCWXSpeed(wpm) {
 }
 
 function clearCWX() {
-  const fb = config.cat?.flexbridge || {};
-  const port = parseInt(fb.statusPort) || 7376;
+  const port = getActiveBridgePort();
   const req = http.request({
     host:'127.0.0.1', port, path:'/cwx/clear',
     method:'POST', headers:{'Content-Type':'application/json','Content-Length':2}
@@ -953,7 +982,7 @@ function startBrowserWS() {
           const hz = Math.round(parseFloat(msg.freq) * 1e6);
           if (isNaN(hz) || hz < 1000000) { console.warn('[CAT] SET_FREQ bad hz:', msg.freq); break; }
           // Always try FlexBridge REST — harmless if not running
-          const fbPort2 = parseInt(config.cat?.flexbridge?.statusPort) || 7376;
+          const fbPort2 = getActiveBridgePort();
           const cmd2 = `FA${String(hz).padStart(11, '0')};`;
           const body2 = JSON.stringify({ command: cmd2 });
           console.log(`[CAT] SET_FREQ → ${(hz/1e6).toFixed(3)} MHz  cmd=${cmd2}  port=${fbPort2}  poll=${!!_fbPollTimer}`);
@@ -972,7 +1001,7 @@ function startBrowserWS() {
 
         case 'SET_MODE': {
           if (!msg.mode) break;
-          const fbPort3 = parseInt(config.cat?.flexbridge?.statusPort) || 7376;
+          const fbPort3 = getActiveBridgePort();
           const ts2k = { SSB:'2', CW:'3', FT8:'9', DIGU:'9', AM:'5', FM:'4' }[msg.mode.toUpperCase()] || '2';
           const cmd3 = `MD${ts2k};`;
           const body3 = JSON.stringify({ command: cmd3 });
@@ -1227,6 +1256,36 @@ function startHTTP() {
       } catch(e){res.writeHead(500,{'Content-Type':'application/json'});return res.end(JSON.stringify({ok:false,error:e.message}));}
     }
 
+    // ── Icom bridge API ────────────────────────────────────────────────────
+    if (pathname==='/api/icom/start'&&req.method==='POST') {
+      try {
+        if (!config.cat) config.cat = {};
+        if (!config.cat.icom) config.cat.icom = {};
+        config.cat.icom.enabled = true;
+        config.cat.rigType = 'icom';
+        fs.writeFileSync(CFG_PATH, JSON.stringify(config, null, 2));
+        startIcomBridge();
+        res.writeHead(200,{'Content-Type':'application/json'});
+        return res.end(JSON.stringify({ok:true, port: config.cat.icom.statusPort || 7377}));
+      } catch(e) {
+        res.writeHead(500,{'Content-Type':'application/json'});
+        return res.end(JSON.stringify({ok:false, error:e.message}));
+      }
+    }
+
+    if (pathname==='/api/icom/stop'&&req.method==='POST') {
+      stopIcomBridge();
+      stopFlexBridgePoll();
+      res.writeHead(200,{'Content-Type':'application/json'});
+      return res.end(JSON.stringify({ok:true}));
+    }
+
+    if (pathname==='/api/icom/status') {
+      const running = !!(_icomBridge && _icomBridge.connected);
+      res.writeHead(200,{'Content-Type':'application/json'});
+      return res.end(JSON.stringify({running, connected: running, radioIp: config.cat?.icom?.radioIp}));
+    }
+
     if (pathname==='/api/flexbridge/stop'&&req.method==='POST') {
       if (global._flexbridgeProc){try{global._flexbridgeProc.kill('SIGTERM');}catch{}global._flexbridgeProc=null;}
       stopFlexBridgePoll();
@@ -1330,7 +1389,7 @@ function startHTTP() {
     // All /api/fb/* requests are proxied to FlexBridge's REST API on port 7376.
     if (pathname.startsWith('/api/fb/')) {
       const fbPath = pathname.replace('/api/fb', '');
-      const fbPort = parseInt(config.cat?.flexbridge?.statusPort) || 7376;
+      const fbPort = getActiveBridgePort();
       let reqBody = '';
       req.on('data', d => reqBody += d);
       req.on('end', () => {
@@ -1532,6 +1591,10 @@ async function boot() {
   startHTTP();
   autostartCatBridge();
   startFlexBridgePoll();
+  // Start Icom bridge if configured
+  if (config.cat?.rigType === 'icom' || config.cat?.icom?.enabled) {
+    startIcomBridge();
+  }
   if (config.wsjt?.enabled) startWsjtListener();
 }
 
@@ -1566,6 +1629,7 @@ function gracefulShutdown(signal) {
   if (_shuttingDown) return;
   _shuttingDown = true;
   console.log(`[Server] ${signal || 'shutdown'} — stopping child processes`);
+  if (_icomBridge) { try { _icomBridge.stop(); } catch {} }
   const kids = [
     ['FlexBridge', global._flexbridgeProc],
     ['cat-bridge', global._catBridgeProc],

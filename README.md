@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.7.0-blue" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-1.8.0-blue" alt="Version"/>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey" alt="Platform"/>
   <img src="https://img.shields.io/badge/license-Copyright%20WW2DX-orange" alt="License"/>
   <img src="https://img.shields.io/badge/node-%3E%3D18-green" alt="Node"/>
@@ -32,6 +32,7 @@ Team Leader is a real-time QSO logging system built for multi-operator DXpeditio
 - **Real-time sync** — log on one station, see it everywhere instantly
 - **Network-wide dupe checking** — prevents duplicates across all operators
 - **FlexRadio integration** — native SmartSDR API support via FlexBridge, standalone or alongside SmartSDR/aetherSDR
+- **Icom IC-7610 integration** — direct CI-V over the radio's built-in network interface, no USB cable or rigctld needed
 - **TCI digimode bridge** — JTDX / MSHV / WSJT-X Improved connect directly to the radio, no BlackHole or virtual audio driver required
 - **Band conflict protection** — automatic TX inhibit when two operators are on the same band
 - **USB backup** — automatic ADIF export to USB drives every 5 minutes
@@ -230,6 +231,33 @@ Built-in CW contest mode with Enter Sends Message workflow:
 
 ---
 
+### Icom IC-7610 Integration (new)
+
+Native support for the Icom IC-7610 over its built-in network interface.
+Team Leader speaks CI-V directly to the radio over TCP — no rigctld, no
+USB cable, no extra software required.
+
+- **Network CI-V** — connects to the IC-7610's LAN IP on port 50001
+  (configurable in the radio's network settings)
+- **Frequency & mode tracking** — live VFO display in the logger, updated
+  in real time via CI-V transceive and 400ms polling
+- **Frequency & mode control** — type a frequency or mode in the call box
+  and the IC-7610 follows, same as FlexRadio
+- **Auto-reconnect** — if the network drops, the bridge reconnects
+  automatically
+- **Same REST API** — uses the same `/status` and `/cat/command` interface
+  as FlexBridge, so all existing features (band conflict protection, TCI,
+  peer sync) work without modification
+
+To configure: set `cat.rigType` to `"icom"` and `cat.icom.radioIp` to your
+IC-7610's IP address in `config.json`, or use the API:
+
+```bash
+curl -X POST http://localhost:7375/api/icom/start
+```
+
+---
+
 ### Standard CAT / Rig Control
 
 For non-FlexRadio rigs, Team Leader supports CAT control via rigctld (Hamlib):
@@ -403,6 +431,7 @@ npm run build:all      # Both platforms
 | 7373  | WebSocket | Browser real-time updates |
 | 7374  | WebSocket | Peer-to-peer QSO sync |
 | 7376  | HTTP      | FlexBridge REST API |
+| 7377  | HTTP      | Icom CI-V bridge REST API |
 | 40001 | WebSocket | FlexBridge TCI server (digimode clients) |
 | 4532  | TCP       | rigctld CAT control |
 | 4992  | UDP/TCP   | SmartSDR API (FlexRadio) |

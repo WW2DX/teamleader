@@ -1,6 +1,6 @@
 {
   "name": "team-leader",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Team Leader \u2014 DXpedition Logger",
   "author": "WW2DX",
   "main": "electron/main.js",
