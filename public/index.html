@@ -1161,6 +1161,9 @@ function toggleESM() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cw: { enabled: cwConfigEnabled } })
   }).catch(() => {});
+  // On Icom, CW won't actually key unless BK-IN is enabled. Turn on semi break-in
+  // when ESM goes on, and turn it off again when ESM goes off. (No-op on Flex.)
+  sendWS({ type: 'CWX_BKIN', mode: cwConfigEnabled ? 'semi' : 'off' });
   renderCWMacroBar();
   showCmd('ESM: ' + (cwConfigEnabled ? 'ON' : 'OFF'));
   addMsg('SYS', 'CW ESM ' + (cwConfigEnabled ? 'enabled' : 'disabled'), 'cmd');

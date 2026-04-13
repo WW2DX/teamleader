@@ -549,6 +549,24 @@ function sendCWXSpeed(wpm) {
   console.log(`[CWX] Setting speed to ${w} wpm`);
 }
 
+// Set CW break-in mode on the active bridge. Only meaningful for Icom — FlexRadio
+// doesn't expose BK-IN via CWX (it's handled implicitly), so we skip Flex here.
+function sendCWXBkIn(mode) {
+  const rigType = config.cat?.rigType;
+  const isIcom = rigType === 'icom' || config.cat?.icom?.enabled;
+  if (!isIcom) return;
+  const port = getActiveBridgePort();
+  const body = JSON.stringify({ mode });
+  const req = http.request({
+    host:'127.0.0.1', port, path:'/cwx/bkin',
+    method:'POST', headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}
+  }, res => { res.resume(); });
+  req.on('error', e => console.warn('[CWX bkin]', e.message));
+  req.setTimeout(2000, ()=>req.destroy());
+  req.write(body); req.end();
+  console.log(`[CWX] BK-IN → ${mode}`);
+}
+
 function clearCWX() {
   const port = getActiveBridgePort();
   const req = http.request({
@@ -1079,6 +1097,10 @@ function startBrowserWS() {
 
         case 'CWX_CLEAR':
           clearCWX();
+          break;
+
+        case 'CWX_BKIN':
+          sendCWXBkIn(msg.mode || 'semi');
           break;
 
         case 'CWX_SPEED': {

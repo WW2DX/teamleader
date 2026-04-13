@@ -86,6 +86,7 @@ async def radio_loop():
     )
 
     while True:
+        last_error = None
         try:
             log.info(f'Connecting to {args.radio}:{args.port}...')
             radio = create_radio(config)
@@ -112,12 +113,18 @@ async def radio_loop():
 
         except Exception as e:
             log.warning(f'Connection error: {e}')
+            last_error = e
             state['connected'] = False
             radio = None
 
         state['connected'] = False
-        log.info('Disconnected — reconnecting in 5s')
-        await asyncio.sleep(5)
+        err_str = str(last_error) if last_error else ''
+        if 'session' in err_str.lower() or 'rejected' in err_str.lower() or '0xFFFFFFFF' in err_str:
+            delay = 30
+        else:
+            delay = 5
+        log.info(f'Disconnected — reconnecting in {delay}s')
+        await asyncio.sleep(delay)
 
 
 def _run_radio_loop():
@@ -261,6 +268,26 @@ class BridgeAPI(BaseHTTPRequestHandler):
                 asyncio.run_coroutine_threadsafe(radio.stop_cw_text(), _loop)
                 log.info('CW stopped')
             self._send(200, {'ok': True})
+
+        elif path == '/cwx/bkin':
+            mode = body.get('mode', 'semi')
+            # Map string/int to BreakInMode
+            try:
+                from icom_lan.types import BreakInMode
+                if isinstance(mode, str):
+                    m = mode.strip().lower()
+                    bk = {'off': BreakInMode.OFF, 'semi': BreakInMode.SEMI, 'full': BreakInMode.FULL}.get(m, BreakInMode.SEMI)
+                else:
+                    bk = BreakInMode(int(mode))
+            except Exception as e:
+                self._send(400, {'ok': False, 'error': f'Invalid mode: {mode} ({e})'})
+                return
+            if state['connected'] and radio and _loop:
+                asyncio.run_coroutine_threadsafe(radio.set_break_in(bk), _loop)
+                log.info(f'BK-IN set: {bk.name}')
+                self._send(200, {'ok': True, 'mode': bk.name})
+            else:
+                self._send(503, {'ok': False, 'error': 'Not connected'})
 
         elif path == '/cwx/speed':
             wpm = body.get('wpm')

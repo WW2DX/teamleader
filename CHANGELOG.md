@@ -2,6 +2,19 @@
 
 All notable changes to Team Leader are documented here.
 
+## [1.11.2] — 2026-04-13
+
+### Fixed
+- **Icom CW ESM now actually transmits.** Enabling ESM on an Icom rig now
+  sets semi break-in (BK-IN) over CI-V, so `send_cw_text` keys the radio
+  instead of silently queuing. Disabling ESM turns BK-IN off again.
+  No-op on FlexRadio (CWX handles keying implicitly).
+- icom-bridge.py: new `/cwx/bkin` endpoint takes `{mode: off|semi|full}`
+  and calls `radio.set_break_in()`.
+- icom-bridge.py: reconnect backoff extended to 30s when the radio rejects
+  a session (error 0xFFFFFFFF) — 5s was too aggressive and kept resetting
+  the radio's cleanup timer for the previous session.
+
 ## [1.11.1] — 2026-04-11
 
 ### Changed
